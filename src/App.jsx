@@ -84,14 +84,32 @@ const encryptData = async (data) => {
 
 // Decrypt data
 const decryptData = async (encryptedData) => {
+  // If data is null or empty, return null
+  if (!encryptedData || encryptedData.trim() === '') {
+    return null;
+  }
+  
   try {
     const key = await getEncryptionKey();
     const decoder = new TextDecoder();
     
-    // Decode from base64
-    const combined = new Uint8Array(
-      atob(encryptedData).split('').map(char => char.charCodeAt(0))
-    );
+    // Decode from base64 with better error handling
+    let combined;
+    try {
+      combined = new Uint8Array(
+        atob(encryptedData).split('').map(char => char.charCodeAt(0))
+      );
+    } catch (atobError) {
+      console.warn("Base64 decode failed, trying as plain JSON:", atobError);
+      // Try to parse as unencrypted JSON
+      try {
+        JSON.parse(encryptedData);
+        return encryptedData;
+      } catch (jsonError) {
+        console.error("Data is neither base64 nor valid JSON", jsonError);
+        return null;
+      }
+    }
     
     // Extract IV and encrypted data
     const iv = combined.slice(0, 12);
@@ -142,12 +160,14 @@ const secureStorage = {
       console.log('[SECURE STORAGE] Found data for key:', key);
       const decrypted = await decryptData(encrypted);
       if (!decrypted) {
-        console.error('[SECURE STORAGE] Decryption returned null');
+        console.error('[SECURE STORAGE] Decryption returned null, clearing corrupted data');
+        localStorage.removeItem(key);
         return null;
       }
       return decrypted;
     } catch (error) {
-      console.error('[SECURE STORAGE] Failed to get:', error);
+      console.error('[SECURE STORAGE] Failed to get, clearing corrupted data:', error);
+      localStorage.removeItem(key);
       return null;
     }
   },
@@ -174,7 +194,12 @@ const TRANSLATIONS = {
       questions: "Open Questions",
       notes: "Notes",
       summary: "Summary",
-      mapping: "Mapping"
+      mapping: "Mapping",
+      designRefs: "Design References",
+      codeRefs: "Code References",
+      design: "Design System",
+      research: "User Research",
+      wireframe: "Structure"
     },
     fields: {
       featureName: "Feature Name",
@@ -195,7 +220,28 @@ const TRANSLATIONS = {
       beforeAfter: "What happens before and after?",
       confidence: "Overall Confidence",
       concerns: "Key Concerns or Risks",
-      nextSteps: "Next Steps"
+      nextSteps: "Next Steps",
+      designSystemName: "Design System Name",
+      designVersion: "Version",
+      componentLibrary: "Component Library Reference",
+      tokensLink: "Design Tokens Documentation",
+      figmaDesignUrl: "Figma File URL",
+      mcpInstructions: "Figma MCP Setup Instructions"
+    },
+    chat: {
+      title: "AI Chat",
+      actions: "Actions",
+      placeholder: "Ask about this task...",
+      send: "Send",
+      accept: "Accept",
+      reject: "Dismiss",
+      thinking: "Thinking...",
+      noKey: "Set your GitHub AI key in the Overview tab to enable AI chat.",
+      secureMode: "AI Chat is disabled in secure mode.",
+      proposalLabel: "Suggested change",
+      applied: "Applied",
+      field: "Field",
+      reason: "Reason",
     }
   },
   da: {
@@ -210,7 +256,12 @@ const TRANSLATIONS = {
       questions: "Åbne Spørgsmål",
       noter: "Noter",
       summary: "Opsummering",
-      mapping: "Kortlægning"
+      mapping: "Kortlægning",
+      designRefs: "Design Referencer",
+      codeRefs: "Kode Referencer",
+      design: "Design System",
+      research: "Brugerundersøgelse",
+      wireframe: "Struktur"
     },
     fields: {
       featureName: "Funktionsnavn",
@@ -231,7 +282,28 @@ const TRANSLATIONS = {
       beforeAfter: "Hvad sker der før og efter?",
       confidence: "Samlet Tillid",
       concerns: "Nøglebekymringer eller Risici",
-      nextSteps: "Næste Skridt"
+      nextSteps: "Næste Skridt",
+      designSystemName: "Design System Navn",
+      designVersion: "Version",
+      componentLibrary: "Komponentbibliotek Reference",
+      tokensLink: "Design Tokens Dokumentation",
+      figmaDesignUrl: "Figma Fil URL",
+      mcpInstructions: "Figma MCP Opsætningsinstruktioner"
+    },
+    chat: {
+      title: "AI Chat",
+      actions: "Handlinger",
+      placeholder: "Spørg om denne opgave...",
+      send: "Send",
+      accept: "Acceptér",
+      reject: "Afvis",
+      thinking: "Tænker...",
+      noKey: "Indstil din GitHub AI-nøgle under Oversigt for at aktivere AI-chat.",
+      secureMode: "AI Chat er deaktiveret i sikker tilstand.",
+      proposalLabel: "Foreslået ændring",
+      applied: "Anvendt",
+      field: "Felt",
+      reason: "Årsag",
     }
   },
   sv: {
@@ -246,7 +318,12 @@ const TRANSLATIONS = {
       questions: "Öppna Frågor",
       notes: "Anteckningar",
       summary: "Sammanfattning",
-      mapping: "Kartläggning"
+      mapping: "Kartläggning",
+      designRefs: "Designreferenser",
+      codeRefs: "Kodreferenser",
+      design: "Design System",
+      research: "Användarforskning",
+      wireframe: "Struktur"
     },
     fields: {
       featureName: "Funktionsnamn",
@@ -267,12 +344,33 @@ const TRANSLATIONS = {
       beforeAfter: "Vad händer före och efter?",
       confidence: "Övergripande Förtroende",
       concerns: "Viktiga Bekymmer eller Risker",
-      nextSteps: "Nästa Steg"
+      nextSteps: "Nästa Steg",
+      designSystemName: "Design System Namn",
+      designVersion: "Version",
+      componentLibrary: "Komponentbibliotek Referens",
+      tokensLink: "Design Tokens Dokumentation",
+      figmaDesignUrl: "Figma Fil URL",
+      mcpInstructions: "Figma MCP Installationsinstruktioner"
+    },
+    chat: {
+      title: "AI Chatt",
+      actions: "Åtgärder",
+      placeholder: "Fråga om denna uppgift...",
+      send: "Skicka",
+      accept: "Godkänn",
+      reject: "Avvisa",
+      thinking: "Tänker...",
+      noKey: "Ställ in din GitHub AI-nyckel under Översikt för att aktivera AI-chatt.",
+      secureMode: "AI Chatt är inaktiverad i säkert läge.",
+      proposalLabel: "Föreslagen ändring",
+      applied: "Tillämpad",
+      field: "Fält",
+      reason: "Anledning",
     }
   }
 };
 
-const SECTIONS = [
+const DESIGN_SECTIONS = [
   { id: "overview", label: "Overview", icon: "◉" },
   { id: "problem", label: "Problem & Purpose", icon: "◎" },
   { id: "context", label: "User Context", icon: "◈" },
@@ -282,9 +380,21 @@ const SECTIONS = [
   { id: "acceptance", label: "Acceptance Criteria", icon: "◈" },
   { id: "questions", label: "Open Questions", icon: "◻" },
   { id: "notes", label: "Notes", icon: "◐" },
-  { id: "mapping", label: "Mapping", icon: "◱" },
+  { id: "research", label: "User Research", icon: "◎" },
+  { id: "designRefs", label: "Design References", icon: "◱" },
+  { id: "codeRefs", label: "Code References", icon: "◇" },
+  { id: "design", label: "Design System", icon: "◆" },
+  { id: "wireframe", label: "Structure", icon: "◧" },
   { id: "summary", label: "Summary", icon: "◼" },
 ];
+
+const DISCOVERY_SECTIONS = [
+  { id: "discoveryTable", label: "Discovery Research", icon: "◫" },
+  { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◈" },
+];
+
+// For backwards compatibility
+const SECTIONS = DESIGN_SECTIONS;
 
 const ORIGIN_OPTIONS = [
   "User Research", "Business Metric", "Competitor Analysis",
@@ -347,15 +457,23 @@ const createBlankAnalysis = (name = "Untitled Design Task") => ({
   questions: [],
   acceptanceCriteria: [],
   actions: [],
-  mapping: { figmaUrl: "https://embed.figma.com/board/JiPxw8hWqRLsTs2cpUFU7O/Figjam-Concept?node-id=378-61&embed-host=share" },
+  research: { rounds: [] },
+  mapping: { figmaUrl: "" },
+  designRefs: { references: [], notes: "" },
+  codeRefs: { repos: [] },
+  design: { figmaUrl: "", systemName: "", version: "", componentLibrary: "", tokensLink: "", mcpInstructions: "" },
+  wireframe: { iaSteps: [] },
   notes: "",
-  summary: { confidence: "", concerns: "", nextSteps: "" },
+  summary: { confidence: "", concerns: "", nextSteps: "", aiTask: "", includedSections: {
+    overview: true, problem: true, context: true, assumptions: false, edges: false,
+    scope: true, acceptance: true, questions: false, notes: false, research: false, mapping: false, designRefs: false, codeRefs: false, design: true, wireframe: false, actions: false
+  } },
 });
 
 // Migrate old analysis data to current structure
 const migrateAnalysis = (analysis) => {
   const blank = createBlankAnalysis();
-  return {
+  const migrated = {
     ...blank,
     ...analysis,
     notes: analysis.notes ?? "",
@@ -364,6 +482,29 @@ const migrateAnalysis = (analysis) => {
     secureMode: analysis.secureMode ?? false,
     language: analysis.language ?? "en",
   };
+
+  // Migrate old mapping.figmaUrl to designRefs
+  if (!migrated.designRefs || !Array.isArray(migrated.designRefs?.references)) {
+    const refs = [];
+    const oldUrl = analysis.mapping?.figmaUrl?.trim();
+    if (oldUrl) {
+      refs.push({ id: generateId(), type: oldUrl.includes("figjam") || oldUrl.includes("board") ? "figjam" : "figma", url: oldUrl, label: "", status: analysis.mapping?.status || "wip" });
+    }
+    migrated.designRefs = { references: refs, notes: "" };
+  }
+
+  // Ensure codeRefs exists
+  if (!migrated.codeRefs || !Array.isArray(migrated.codeRefs?.repos)) {
+    migrated.codeRefs = { repos: [] };
+  }
+
+  // Ensure includedSections has new keys
+  if (migrated.summary?.includedSections) {
+    if (migrated.summary.includedSections.designRefs === undefined) migrated.summary.includedSections.designRefs = false;
+    if (migrated.summary.includedSections.codeRefs === undefined) migrated.summary.includedSections.codeRefs = false;
+  }
+
+  return migrated;
 };
 
 // GitHub Gist API functions
@@ -782,7 +923,25 @@ function getSectionCompletion(analysis, sectionId) {
       total = 1; 
       if (analysis.mapping?.figmaUrl?.trim()) filled = 1; 
       break;
+    case "designRefs":
+      total = 1;
+      if ((analysis.designRefs?.references || []).length > 0) filled = 1;
+      break;
+    case "codeRefs":
+      total = 1;
+      if ((analysis.codeRefs?.repos || []).length > 0) filled = 1;
+      break;
+    case "design":
+      check(analysis.design?.figmaUrl);
+      check(analysis.design?.systemName);
+      check(analysis.design?.version);
+      check(analysis.design?.componentLibrary);
+      check(analysis.design?.tokensLink);
+      check(analysis.design?.mcpInstructions);
+      break;
     case "notes": check(analysis.notes); break;
+    case "research": total = 1; if ((analysis.research?.rounds || []).length > 0) filled = 1; break;
+    case "wireframe": total = 1; if ((analysis.wireframe?.iaSteps || []).length > 0) filled = 1; break;
     case "summary": Object.values(analysis.summary).forEach(check); break;
   }
   return total > 0 ? Math.round((filled / total) * 100) : 0;
@@ -880,6 +1039,45 @@ function exportToMarkdown(a) {
     lines.push(`Figma Embed: ${a.mapping.figmaUrl}`);
   } else {
     lines.push("*No mapping URL set.*");
+  }
+
+  h("Design References");
+  if (a.designRefs?.references?.length > 0) {
+    a.designRefs.references.forEach((ref, i) => {
+      const typeLabel = DESIGN_REF_TYPE_LABELS[ref.type] || ref.type;
+      lines.push(`${i + 1}. [${typeLabel}] ${ref.label || 'Untitled'} — ${ref.url || '(no URL)'} (${ref.status || 'wip'})`);
+    });
+    if (a.designRefs.notes?.trim()) lines.push(`\n**Notes:** ${a.designRefs.notes}`);
+  } else {
+    lines.push("*No design references yet.*");
+  }
+
+  h("Code References");
+  if (a.codeRefs?.repos?.length > 0) {
+    a.codeRefs.repos.forEach((repo, i) => {
+      const typeLabel = CODE_REF_TYPE_LABELS[repo.type] || repo.type;
+      const branch = repo.branch ? ` (${repo.branch})` : '';
+      lines.push(`${i + 1}. [${typeLabel}] ${repo.label || 'Untitled'} — ${repo.url || '(no URL)'}${branch}`);
+      if (repo.notes?.trim()) lines.push(`   - ${repo.notes}`);
+    });
+  } else {
+    lines.push("*No code references yet.*");
+  }
+
+  h("Design System");
+  f("Design System Name", a.design?.systemName);
+  f("Version", a.design?.version);
+  f("Component Library", a.design?.componentLibrary);
+  f("Design Tokens Link", a.design?.tokensLink);
+  if (a.design?.figmaUrl) {
+    lines.push(`Figma File: ${a.design.figmaUrl}`);
+  }
+  if (a.design?.mcpInstructions?.trim()) {
+    lines.push(`\n**Figma MCP Setup Instructions:**`);
+    lines.push(a.design.mcpInstructions);
+  }
+  if (!a.design?.systemName && !a.design?.figmaUrl) {
+    lines.push("*No design system reference set.*");
   }
 
   h("Notes");
@@ -1029,6 +1227,25 @@ function importFromMarkdown(markdown) {
         }
         break;
         
+      case "Design System":
+        buffer.forEach(line => {
+          const field = parseField(line);
+          if (!field) return;
+          if (field.label === "Design System Name") analysis.design.systemName = field.value;
+          if (field.label === "Version") analysis.design.version = field.value;
+          if (field.label === "Component Library") analysis.design.componentLibrary = field.value;
+          if (field.label === "Design Tokens Link") analysis.design.tokensLink = field.value;
+        });
+        const designFigmaMatch = content.match(/Figma File:\s*(.+)/);
+        if (designFigmaMatch) {
+          analysis.design.figmaUrl = designFigmaMatch[1].trim();
+        }
+        const mcpMatch = content.match(/\*\*Figma MCP Setup Instructions:\*\*\s*([\s\S]+?)(?=\n\n|$)/);
+        if (mcpMatch) {
+          analysis.design.mcpInstructions = mcpMatch[1].trim();
+        }
+        break;
+        
       case "Notes":
         if (content && !content.includes("*No notes.*")) {
           analysis.notes = content;
@@ -1094,13 +1311,36 @@ function importFromMarkdown(markdown) {
 
 // --- UI Components ---
 
+const AutoResizeTextarea = ({ value, onChange, rows, className, placeholder }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el) {
+      el.style.height = 'auto';
+      const minHeight = rows * 24; // ~24px per row
+      el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
+    }
+  }, [value, rows]);
+  return (
+    <textarea
+      ref={ref}
+      className={className}
+      rows={rows}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      style={{ overflow: 'hidden' }}
+    />
+  );
+};
+
 const Field = ({ label, hint, placeholder, value, onChange, multiline = false, rows = 3 }) => (
   <div className="mb-4">
     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
     {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{hint}</p>}
     {multiline ? (
-      <textarea
-        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-y bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+      <AutoResizeTextarea
+        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
         rows={rows} value={value || ""} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
@@ -2196,42 +2436,1093 @@ const NotesSection = ({ data, language, onChange }) => {
   );
 };
 
-const MappingSection = ({ data, language, onChange }) => {
+const RESEARCH_METHODOLOGIES = [
+  "Usability Testing", "A/B Testing", "User Interview", "Survey",
+  "Card Sorting", "Tree Testing", "Heuristic Review", "Contextual Inquiry", "Other"
+];
+
+const UserResearchSection = ({ data, language, onChange }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const rounds = data.rounds || [];
+  
+  const addRound = () => {
+    const newRound = {
+      id: Math.random().toString(36).slice(2, 10),
+      name: `Round ${rounds.length + 1}`,
+      date: new Date().toISOString().split('T')[0],
+      methodology: "",
+      participants: "",
+      hypotheses: "",
+      scenarios: [],
+      findings: "",
+      recommendations: ""
+    };
+    onChange({ ...data, rounds: [...rounds, newRound] });
+  };
+  
+  const updateRound = (id, updates) => {
+    onChange({ ...data, rounds: rounds.map(r => r.id === id ? { ...r, ...updates } : r) });
+  };
+  
+  const deleteRound = (id) => {
+    onChange({ ...data, rounds: rounds.filter(r => r.id !== id) });
+  };
+  
+  const addScenario = (roundId) => {
+    const round = rounds.find(r => r.id === roundId);
+    if (!round) return;
+    const newScenario = { id: Math.random().toString(36).slice(2, 10), task: "", expectedOutcome: "", result: "", notes: "" };
+    updateRound(roundId, { scenarios: [...(round.scenarios || []), newScenario] });
+  };
+  
+  const updateScenario = (roundId, scenarioId, updates) => {
+    const round = rounds.find(r => r.id === roundId);
+    if (!round) return;
+    updateRound(roundId, { scenarios: (round.scenarios || []).map(s => s.id === scenarioId ? { ...s, ...updates } : s) });
+  };
+  
+  const deleteScenario = (roundId, scenarioId) => {
+    const round = rounds.find(r => r.id === roundId);
+    if (!round) return;
+    updateRound(roundId, { scenarios: (round.scenarios || []).filter(s => s.id !== scenarioId) });
+  };
+  
+  const [expandedRounds, setExpandedRounds] = useState({});
+  const toggleExpand = (id) => setExpandedRounds(prev => ({ ...prev, [id]: !prev[id] }));
+  
+  return (
+    <div>
+      <SectionHeader title={t.sections.research || "User Research"} description="Plan research rounds, document test scenarios, and capture findings to iterate on your design." />
+      
+      {rounds.length === 0 && (
+        <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+          <svg className="w-10 h-10 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p className="text-sm">No research rounds yet</p>
+          <p className="text-xs mt-1">Add a round to plan and document user testing</p>
+        </div>
+      )}
+      
+      <div className="space-y-3">
+        {rounds.map((round, idx) => {
+          const isExpanded = expandedRounds[round.id] !== false;
+          const scenarioCount = (round.scenarios || []).length;
+          const hasFindings = round.findings?.trim();
+          
+          return (
+            <div key={round.id} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+              <div
+                className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/50 cursor-pointer"
+                onClick={() => toggleExpand(round.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{round.name || `Round ${idx + 1}`}</span>
+                  {round.methodology && <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">{round.methodology}</span>}
+                  {scenarioCount > 0 && <span className="text-xs text-slate-500 dark:text-slate-400">{scenarioCount} scenario{scenarioCount !== 1 ? 's' : ''}</span>}
+                  {hasFindings && <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded">Has findings</span>}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteRound(round.id); }}
+                  className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                  title="Delete round"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+              
+              {isExpanded && (
+                <div className="px-4 py-4 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Round Name</label>
+                      <input
+                        type="text"
+                        value={round.name || ""}
+                        onChange={(e) => updateRound(round.id, { name: e.target.value })}
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Date</label>
+                      <input
+                        type="date"
+                        value={round.date || ""}
+                        onChange={(e) => updateRound(round.id, { date: e.target.value })}
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Methodology</label>
+                    <select
+                      value={round.methodology || ""}
+                      onChange={(e) => updateRound(round.id, { methodology: e.target.value })}
+                      className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                    >
+                      <option value="">Select methodology...</option>
+                      {RESEARCH_METHODOLOGIES.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Participants</label>
+                    <AutoResizeTextarea
+                      className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+                      rows={2}
+                      value={round.participants || ""}
+                      onChange={(e) => updateRound(round.id, { participants: e.target.value })}
+                      placeholder="Number and type of participants, recruitment criteria..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hypotheses</label>
+                    <AutoResizeTextarea
+                      className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+                      rows={2}
+                      value={round.hypotheses || ""}
+                      onChange={(e) => updateRound(round.id, { hypotheses: e.target.value })}
+                      placeholder="What are you trying to validate or learn?"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">Test Scenarios</label>
+                      <button
+                        onClick={() => addScenario(round.id)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                      >
+                        + Add scenario
+                      </button>
+                    </div>
+                    
+                    {(round.scenarios || []).length === 0 && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">No test scenarios defined yet</p>
+                    )}
+                    
+                    <div className="space-y-2">
+                      {(round.scenarios || []).map((scenario, sIdx) => (
+                        <div key={scenario.id} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-800">
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Scenario {sIdx + 1}</span>
+                            <button
+                              onClick={() => deleteScenario(round.id, scenario.id)}
+                              className="text-slate-400 hover:text-red-500 dark:hover:text-red-400"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={scenario.task || ""}
+                              onChange={(e) => updateScenario(round.id, scenario.id, { task: e.target.value })}
+                              placeholder="Task: What the user should try to do..."
+                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                            />
+                            <input
+                              type="text"
+                              value={scenario.expectedOutcome || ""}
+                              onChange={(e) => updateScenario(round.id, scenario.id, { expectedOutcome: e.target.value })}
+                              placeholder="Expected outcome: What success looks like..."
+                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                            />
+                            <select
+                              value={scenario.result || ""}
+                              onChange={(e) => updateScenario(round.id, scenario.id, { result: e.target.value })}
+                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+                            >
+                              <option value="">Result: Not tested yet</option>
+                              <option value="pass">✓ Pass — Users completed successfully</option>
+                              <option value="partial">◐ Partial — Completed with difficulty</option>
+                              <option value="fail">✗ Fail — Users could not complete</option>
+                            </select>
+                            <AutoResizeTextarea
+                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+                              rows={1}
+                              value={scenario.notes || ""}
+                              onChange={(e) => updateScenario(round.id, scenario.id, { notes: e.target.value })}
+                              placeholder="Observations, quotes, notable behaviors..."
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Findings</label>
+                    <AutoResizeTextarea
+                      className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+                      rows={3}
+                      value={round.findings || ""}
+                      onChange={(e) => updateRound(round.id, { findings: e.target.value })}
+                      placeholder="Key observations, patterns, pain points discovered..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Recommendations</label>
+                    <AutoResizeTextarea
+                      className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+                      rows={3}
+                      value={round.recommendations || ""}
+                      onChange={(e) => updateRound(round.id, { recommendations: e.target.value })}
+                      placeholder="Design changes, iterations, or next steps based on findings..."
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      <button
+        onClick={addRound}
+        className="mt-4 w-full px-4 py-2.5 text-sm font-medium border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+      >
+        + Add Research Round
+      </button>
+    </div>
+  );
+};
+
+const DESIGN_REF_TYPES = ["figma", "figjam", "image"];
+const DESIGN_REF_TYPE_LABELS = { figma: "Figma", figjam: "Figjam", image: "Image" };
+
+const DesignReferencesSection = ({ data, language, onChange }) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const references = data.references || [];
+
+  const addReference = () => {
+    onChange({ ...data, references: [...references, { id: generateId(), type: "figma", url: "", label: "", status: "wip", imageData: "" }] });
+  };
+  const updateRef = (id, updates) => {
+    onChange({ ...data, references: references.map(r => r.id === id ? { ...r, ...updates } : r) });
+  };
+  const removeRef = (id) => {
+    onChange({ ...data, references: references.filter(r => r.id !== id) });
+  };
+  const handleImageUpload = (id, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Image too large. Max 2MB."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => updateRef(id, { imageData: ev.target.result, url: file.name });
+    reader.readAsDataURL(file);
+  };
+
   return (
   <div>
-    <SectionHeader title={t.sections.mapping} description="Visual mapping and conceptual diagrams for this requirement." />
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Figjam/Figma Embed URL</label>
-      <input
-        type="text"
-        value={data.figmaUrl || ""}
-        onChange={(e) => onChange({ ...data, figmaUrl: e.target.value })}
-        placeholder="https://embed.figma.com/..."
-        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
-      />
-      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Paste a Figjam or Figma embed URL to display your mapping board</p>
-    </div>
-    {data.figmaUrl && (
-      <div className="-mx-6">
-        <div className="border-t border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 w-full" style={{ height: "calc(100vh - 280px)", minHeight: "600px" }}>
-          <iframe
-            style={{ border: "1px solid rgba(0, 0, 0, 0.1)" }}
-            width="100%"
-            height="100%"
-            src={data.figmaUrl}
-            allowFullScreen
-            className="w-full h-full"
-          />
+    <SectionHeader title={t.sections.designRefs || "Design References"} description="Figma files, Figjam boards, and reference images for this design task." />
+    
+    {references.length === 0 && (
+      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+        <p className="text-3xl mb-2">◱</p>
+        <p className="text-sm">No design references yet. Add Figma links, Figjam boards, or images.</p>
+      </div>
+    )}
+
+    <div className="space-y-4">
+      {references.map((ref, idx) => (
+        <div key={ref.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-white dark:bg-slate-800">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0">#{idx + 1}</span>
+              <input
+                type="text"
+                value={ref.label || ""}
+                onChange={(e) => updateRef(ref.id, { label: e.target.value })}
+                placeholder="Label (e.g., Main flow, Login screen...)"
+                className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              />
+            </div>
+            <button onClick={() => removeRef(ref.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm shrink-0" title="Remove">✕</button>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            {/* Type selector */}
+            <div className="flex items-center gap-1">
+              {DESIGN_REF_TYPES.map(type => (
+                <button
+                  key={type}
+                  onClick={() => updateRef(ref.id, { type, imageData: type !== "image" ? "" : ref.imageData })}
+                  className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors ${
+                    ref.type === type
+                      ? 'bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-500'
+                      : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  {DESIGN_REF_TYPE_LABELS[type]}
+                </button>
+              ))}
+            </div>
+
+            {/* Status toggle */}
+            <div className="flex items-center gap-1 ml-auto">
+              <button
+                onClick={() => updateRef(ref.id, { status: 'wip' })}
+                className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
+                  ref.status === 'wip'
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                    : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600'
+                }`}
+              >WIP</button>
+              <button
+                onClick={() => updateRef(ref.id, { status: 'final' })}
+                className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
+                  ref.status === 'final'
+                    ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700'
+                    : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600'
+                }`}
+              >Final</button>
+            </div>
+          </div>
+
+          {/* URL input for figma/figjam */}
+          {ref.type !== "image" && (
+            <div className="mb-3">
+              <input
+                type="text"
+                value={ref.url || ""}
+                onChange={(e) => updateRef(ref.id, { url: e.target.value })}
+                placeholder={ref.type === "figjam" ? "https://embed.figma.com/board/..." : "https://embed.figma.com/design/..."}
+                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+              />
+            </div>
+          )}
+
+          {/* Image upload for image type */}
+          {ref.type === "image" && (
+            <div className="mb-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(ref.id, e)}
+                className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200"
+              />
+            </div>
+          )}
+
+          {/* Preview: iframe for figma/figjam, thumbnail for image */}
+          {ref.type !== "image" && ref.url && (
+            <details className="mt-2">
+              <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">Show embed preview</summary>
+              <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800" style={{ height: "400px" }}>
+                <iframe style={{ border: "none" }} width="100%" height="100%" src={ref.url} allowFullScreen className="w-full h-full" />
+              </div>
+            </details>
+          )}
+          {ref.type === "image" && ref.imageData && (
+            <details className="mt-2" open>
+              <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">Show image preview</summary>
+              <div className="mt-2">
+                <img src={ref.imageData} alt={ref.label || "Reference"} className="max-w-full rounded-lg border border-slate-200 dark:border-slate-700" style={{ maxHeight: "400px" }} />
+              </div>
+            </details>
+          )}
         </div>
+      ))}
+    </div>
+
+    <button
+      onClick={addReference}
+      className="mt-4 w-full px-4 py-2.5 text-sm font-medium border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+    >
+      + Add Reference
+    </button>
+
+    <div className="mt-4">
+      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Notes</label>
+      <AutoResizeTextarea
+        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 resize-none"
+        rows={2}
+        value={data.notes || ""}
+        onChange={(e) => onChange({ ...data, notes: e.target.value })}
+        placeholder="General notes about design references..."
+      />
+    </div>
+  </div>
+  );
+};
+
+const CODE_REF_TYPES = ["prototype", "production", "package", "docs", "other"];
+const CODE_REF_TYPE_LABELS = { prototype: "Prototype", production: "Production", package: "Package/Library", docs: "Documentation", other: "Other" };
+
+const CodeReferencesSection = ({ data, language, onChange }) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const repos = data.repos || [];
+
+  const addRepo = () => {
+    onChange({ ...data, repos: [...repos, { id: generateId(), url: "", label: "", type: "prototype", branch: "", notes: "" }] });
+  };
+  const updateRepo = (id, updates) => {
+    onChange({ ...data, repos: repos.map(r => r.id === id ? { ...r, ...updates } : r) });
+  };
+  const removeRepo = (id) => {
+    onChange({ ...data, repos: repos.filter(r => r.id !== id) });
+  };
+
+  return (
+  <div>
+    <SectionHeader title={t.sections.codeRefs || "Code References"} description="GitHub repos, prototype links, package references, and documentation for this feature." />
+
+    {repos.length === 0 && (
+      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+        <p className="text-3xl mb-2">◇</p>
+        <p className="text-sm">No code references yet. Add GitHub repos, prototypes, or documentation links.</p>
+      </div>
+    )}
+
+    <div className="space-y-3">
+      {repos.map((repo, idx) => (
+        <div key={repo.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-white dark:bg-slate-800">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0">#{idx + 1}</span>
+              <input
+                type="text"
+                value={repo.label || ""}
+                onChange={(e) => updateRepo(repo.id, { label: e.target.value })}
+                placeholder="Label (e.g., Frontend repo, API docs...)"
+                className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              />
+            </div>
+            <button onClick={() => removeRepo(repo.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm shrink-0" title="Remove">✕</button>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {CODE_REF_TYPES.map(type => (
+              <button
+                key={type}
+                onClick={() => updateRepo(repo.id, { type })}
+                className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors ${
+                  repo.type === type
+                    ? 'bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-500'
+                    : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                }`}
+              >
+                {CODE_REF_TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <div className="sm:col-span-3">
+              <input
+                type="text"
+                value={repo.url || ""}
+                onChange={(e) => updateRepo(repo.id, { url: e.target.value })}
+                placeholder="https://github.com/org/repo"
+                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                value={repo.branch || ""}
+                onChange={(e) => updateRepo(repo.id, { branch: e.target.value })}
+                placeholder="Branch/tag"
+                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <input
+              type="text"
+              value={repo.notes || ""}
+              onChange={(e) => updateRepo(repo.id, { notes: e.target.value })}
+              placeholder="Notes (e.g., check /src/components for patterns...)"
+              className="w-full px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-300"
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <button
+      onClick={addRepo}
+      className="mt-4 w-full px-4 py-2.5 text-sm font-medium border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+    >
+      + Add Code Reference
+    </button>
+  </div>
+  );
+};
+
+const DESIGN_SYSTEM_PRESETS = {
+  'b2c': {
+    label: 'Live B2C (tre.se)',
+    systemName: 'Tre Consumer Design System',
+    description: 'Consumer-facing design system for tre.se. Swedish locale, responsive, dark navy primary color.',
+  },
+  'b2b': {
+    label: 'Live B2B (Tre Företag)',
+    systemName: 'Tre Business Design System',
+    description: 'Business-facing design system for Tre Företag. Swedish locale, professional tone, enterprise patterns.',
+  },
+  'custom': {
+    label: 'Custom / Other',
+    systemName: '',
+    description: '',
+  },
+};
+
+const DesignSystemSection = ({ data, language, onChange }) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const preset = data.preset || 'custom';
+  
+  const handlePresetChange = (presetId) => {
+    const p = DESIGN_SYSTEM_PRESETS[presetId];
+    if (presetId === 'custom') {
+      onChange({ ...data, preset: presetId });
+    } else {
+      onChange({
+        ...data,
+        preset: presetId,
+        systemName: p.systemName,
+      });
+    }
+  };
+  
+  return (
+  <div>
+    <SectionHeader title={t.sections.design} description="Reference your design system for consistent component usage and AI context." />
+    
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Design System</label>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(DESIGN_SYSTEM_PRESETS).map(([id, p]) => (
+            <button
+              key={id}
+              onClick={() => handlePresetChange(id)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                preset === id
+                  ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 border-slate-800 dark:border-slate-200'
+                  : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset !== 'custom' && DESIGN_SYSTEM_PRESETS[preset]?.description && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{DESIGN_SYSTEM_PRESETS[preset].description}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.designSystemName}</label>
+        <input
+          type="text"
+          value={data.systemName || ""}
+          onChange={(e) => onChange({ ...data, systemName: e.target.value })}
+          placeholder="e.g., Material Design, Carbon, Polaris"
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.designVersion}</label>
+        <input
+          type="text"
+          value={data.version || ""}
+          onChange={(e) => onChange({ ...data, version: e.target.value })}
+          placeholder="e.g., v3.2, 2024.1"
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.componentLibrary}</label>
+        <input
+          type="text"
+          value={data.componentLibrary || ""}
+          onChange={(e) => onChange({ ...data, componentLibrary: e.target.value })}
+          placeholder="e.g., @company/design-system, npm package name"
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Package or repository reference for the component library</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.tokensLink}</label>
+        <input
+          type="url"
+          value={data.tokensLink || ""}
+          onChange={(e) => onChange({ ...data, tokensLink: e.target.value })}
+          placeholder="https://..."
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Link to design tokens documentation (colors, typography, spacing)</p>
+      </div>
+
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.figmaDesignUrl}</label>
+        <input
+          type="url"
+          value={data.figmaUrl || ""}
+          onChange={(e) => onChange({ ...data, figmaUrl: e.target.value })}
+          placeholder="https://www.figma.com/design/..."
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Link to your Figma design system file</p>
+        
+        {data.figmaUrl && (
+          <a
+            href={data.figmaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded-lg transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M5 3c-1.093 0-2 .907-2 2v14c0 1.093.907 2 2 2h6v-2H5V5h6V3H5zm9 0v2h5v14h-5v2h5c1.093 0 2-.907 2-2V5c0-1.093-.907-2-2-2h-5zm-2 5v3H9v2h3v3h2v-3h3v-2h-3V8h-2z"/>
+            </svg>
+            Open in Figma
+          </a>
+        )}
+      </div>
+
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.fields.mcpInstructions}</label>
+        <textarea
+          value={data.mcpInstructions || ""}
+          onChange={(e) => onChange({ ...data, mcpInstructions: e.target.value })}
+          placeholder={"Example MCP setup command:\nnpx -y @modelcontextprotocol/server-figma --access-token YOUR_TOKEN --file-key abc123\n\nOr include instructions for your specific MCP configuration for AI agents to access this Figma file."}
+          rows={6}
+          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 font-mono"
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <strong>For AI Context:</strong> Provide setup instructions or MCP connection details so AI agents (like GitHub Copilot with Figma MCP) can access design system components, tokens, and patterns programmatically. This helps AI provide context-aware design suggestions.
+        </p>
+      </div>
+    </div>
+  </div>
+  );
+};
+
+const WireframeSection = ({ data, analysis, language, githubAIKey, onChange }) => {
+  const [iaGenerating, setIaGenerating] = useState(false);
+  const [wireframeGenerating, setWireframeGenerating] = useState(null); // step id being generated
+  const [expandedStep, setExpandedStep] = useState(null);
+  const steps = data.iaSteps || [];
+
+  const generateIASkeleton = async () => {
+    if (!githubAIKey) return;
+    setIaGenerating(true);
+    try {
+      const briefContext = [
+        analysis.overview?.description && `Description: ${analysis.overview.description}`,
+        analysis.overview?.featureName && `Feature: ${analysis.overview.featureName}`,
+        analysis.problem?.problem && `Problem: ${analysis.problem.problem}`,
+        analysis.problem?.outcome && `Desired outcome: ${analysis.problem.outcome}`,
+        analysis.context?.workflow && `Current workflow: ${analysis.context.workflow}`,
+        analysis.context?.segments && `Users: ${analysis.context.segments}`,
+        analysis.scope?.affected && `Affected areas: ${analysis.scope.affected}`,
+        ...(analysis.acceptanceCriteria || []).filter(c => c.text?.trim()).map(c => `Criteria [${c.priority}]: ${c.text}`),
+        ...(analysis.scope?.items || []).filter(i => i.text?.trim() && i.version !== 'Cut').map(i => `Scope [${i.version}]: ${i.text}`),
+      ].filter(Boolean).join('\n');
+
+      const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${githubAIKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'system',
+            content: 'You are a UX/IA architect. Given a feature brief, generate an information architecture skeleton as a list of screens/steps the user will go through. Return a JSON array of objects with "name" (short screen/step name), "description" (one sentence explaining the purpose), and "type" (either "frontend" for user-facing screens/pages/forms or "backend" for server-side processing, API calls, third-party integrations, data sync, authentication services, or any step without a visible UI). Order them in the logical user flow. Keep it to 4-10 steps. Return ONLY the JSON array, no markdown.'
+          }, {
+            role: 'user',
+            content: briefContext
+          }],
+          temperature: 0.7,
+          max_tokens: 1500
+        })
+      });
+      if (!response.ok) throw new Error('API error');
+      const result = await response.json();
+      const content = result.choices[0].message.content;
+      const parsed = JSON.parse(content.replace(/```json?\n?/g, '').replace(/```/g, '').trim());
+      if (Array.isArray(parsed)) {
+        const newSteps = parsed.map((s, i) => ({
+          id: `step-${Date.now()}-${i}`,
+          name: s.name || `Step ${i + 1}`,
+          description: s.description || '',
+          type: s.type === 'backend' ? 'backend' : 'frontend',
+          designTask: s.type !== 'backend',
+          wireframe: '',
+          detailLevel: 'medium',
+          prompt: ''
+        }));
+        onChange({ ...data, iaSteps: newSteps });
+      }
+    } catch (err) {
+      console.error('IA generation failed:', err);
+    } finally {
+      setIaGenerating(false);
+    }
+  };
+
+  const generateWireframe = async (stepId) => {
+    if (!githubAIKey) return;
+    const step = steps.find(s => s.id === stepId);
+    if (!step) return;
+    setWireframeGenerating(stepId);
+    try {
+      const contextParts = [
+        analysis.overview?.featureName && `Feature: ${analysis.overview.featureName}`,
+        analysis.overview?.description && `Description: ${analysis.overview.description}`,
+        analysis.design?.systemName && `Design System: ${analysis.design.systemName}`,
+        analysis.context?.segments && `Target users: ${analysis.context.segments}`,
+      ].filter(Boolean).join('\n');
+
+      const iaContext = steps.map((s, i) => `${i + 1}. ${s.name}: ${s.description}`).join('\n');
+      const promptExtra = step.prompt?.trim() ? `\nAdditional instructions: ${step.prompt}` : '';
+
+      const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${githubAIKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'system',
+            content: `You are a UX wireframe specialist. Create an ASCII wireframe for a screen/step using box-drawing characters. Detail level: ${step.detailLevel === 'high' ? 'HIGH - include all UI elements, labels, placeholder text, buttons, form fields, navigation, status indicators' : 'MEDIUM - show main layout areas, key elements, primary actions'}. Use characters like ┌─┐│└─┘├┤┬┴┼ for borders, ═ for emphasis, [ Button ] for buttons, [___________] for inputs, (○) (●) for radio, [☐] [☑] for checkboxes. Keep width under 70 characters. Return ONLY the ASCII wireframe, no explanations.`
+          }, {
+            role: 'user',
+            content: `Screen: ${step.name}\nPurpose: ${step.description}\n\nFull IA flow:\n${iaContext}\n\nProject context:\n${contextParts}${promptExtra}`
+          }],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+      if (!response.ok) throw new Error('API error');
+      const result = await response.json();
+      const wireframeText = result.choices[0].message.content.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
+      const updated = steps.map(s => s.id === stepId ? { ...s, wireframe: wireframeText } : s);
+      onChange({ ...data, iaSteps: updated });
+    } catch (err) {
+      console.error('Wireframe generation failed:', err);
+    } finally {
+      setWireframeGenerating(null);
+    }
+  };
+
+  const updateStep = (stepId, field, value) => {
+    const updated = steps.map(s => s.id === stepId ? { ...s, [field]: value } : s);
+    onChange({ ...data, iaSteps: updated });
+  };
+
+  const addStep = () => {
+    const newStep = {
+      id: `step-${Date.now()}`,
+      name: `Step ${steps.length + 1}`,
+      description: '',
+      type: 'frontend',
+      designTask: true,
+      wireframe: '',
+      detailLevel: 'medium',
+      prompt: ''
+    };
+    onChange({ ...data, iaSteps: [...steps, newStep] });
+  };
+
+  const deleteStep = (stepId) => {
+    onChange({ ...data, iaSteps: steps.filter(s => s.id !== stepId) });
+  };
+
+  const moveStep = (index, direction) => {
+    const newSteps = [...steps];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newSteps.length) return;
+    [newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]];
+    onChange({ ...data, iaSteps: newSteps });
+  };
+
+  return (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Structure</h2>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={addStep}
+          className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        >
+          + Add Screen
+        </button>
+        <button
+          onClick={generateIASkeleton}
+          disabled={iaGenerating || !githubAIKey}
+          className="px-4 py-2 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          {iaGenerating ? 'Generating...' : steps.length > 0 ? 'Regenerate IA' : 'Generate IA from Brief'}
+        </button>
+      </div>
+    </div>
+
+    {!githubAIKey && (
+      <p className="text-sm text-amber-600 dark:text-amber-400">
+        Set your GitHub AI key in the Overview tab to enable AI generation.
+      </p>
+    )}
+
+    {/* IA Sitemap Diagram — Vertical with inline expansion */}
+    {steps.length > 0 && (
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Information Architecture</p>
+        <div className="flex flex-col items-center gap-0">
+          {steps.map((step, index) => {
+            const isExpanded = expandedStep === step.id;
+            return (
+            <div key={step.id} className="flex flex-col items-center w-full">
+              <div className={`w-full max-w-md mx-auto rounded-lg border-2 transition-all ${step.type === 'backend' ? 'border-dashed ' : ''}${
+                  isExpanded
+                    ? step.type === 'backend'
+                      ? 'border-amber-500 dark:border-amber-400 bg-amber-50/50 dark:bg-amber-900/20 shadow-md'
+                      : 'border-slate-800 dark:border-slate-300 bg-slate-50 dark:bg-slate-700/50 shadow-md'
+                    : step.type === 'backend'
+                      ? step.wireframe
+                        ? 'border-amber-400 dark:border-amber-500/60 bg-white dark:bg-slate-800 hover:border-amber-500 dark:hover:border-amber-400'
+                        : 'border-amber-200 dark:border-amber-600/40 bg-white dark:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500/60'
+                      : step.wireframe
+                        ? 'border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-800 hover:border-slate-600 dark:hover:border-slate-400'
+                        : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-500'
+                }`}>
+                {/* Clickable header */}
+                <button
+                  onClick={() => setExpandedStep(isExpanded ? null : step.id)}
+                  className="w-full px-4 py-3 text-left"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5 shrink-0">{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{step.name}</span>
+                        {step.type === 'backend' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-medium">Backend</span>
+                        )}
+                        {step.designTask && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-medium">Design</span>
+                        )}
+                      </div>
+                      {!isExpanded && step.description && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">{step.description}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {step.wireframe && (
+                        <span className="w-2.5 h-2.5 bg-green-500 rounded-full" title="Has wireframe" />
+                      )}
+                      <span className={`text-xs text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>⌄</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded inline content */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-slate-200/50 dark:border-slate-600/50 pt-3">
+                    <input
+                      type="text"
+                      value={step.name}
+                      onChange={(e) => updateStep(step.id, 'name', e.target.value)}
+                      className="w-full px-3 py-2 text-sm font-medium border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      placeholder="Screen name"
+                    />
+                    <AutoResizeTextarea
+                      value={step.description}
+                      onChange={(e) => updateStep(step.id, 'description', e.target.value)}
+                      placeholder="Screen purpose / description"
+                      rows={1}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none"
+                    />
+
+                    {/* Type + Design toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        {['frontend', 'backend'].map(t => (
+                          <button
+                            key={t}
+                            onClick={() => updateStep(step.id, 'type', t)}
+                            className={`px-2.5 py-1.5 text-xs rounded font-medium ${(step.type || 'frontend') === t
+                              ? t === 'backend'
+                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-600'
+                                : 'bg-slate-800 dark:bg-slate-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            {t === 'frontend' ? 'Frontend' : 'Backend'}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Design task</span>
+                        <button
+                          onClick={() => updateStep(step.id, 'designTask', !step.designTask)}
+                          className={`relative w-9 h-5 rounded-full transition-colors ${step.designTask ? 'bg-blue-500 dark:bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${step.designTask ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                      </label>
+                    </div>
+
+                    {/* Wireframe controls */}
+                    <div className="space-y-3 pt-1 border-t border-slate-200/50 dark:border-slate-600/50">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500">Detail:</span>
+                          {['medium', 'high'].map(level => (
+                            <button
+                              key={level}
+                              onClick={() => updateStep(step.id, 'detailLevel', level)}
+                              className={`px-2 py-1 text-xs rounded ${step.detailLevel === level ? 'bg-slate-800 dark:bg-slate-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+                            >
+                              {level === 'medium' ? 'Medium' : 'High'}
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          value={step.prompt || ''}
+                          onChange={(e) => updateStep(step.id, 'prompt', e.target.value)}
+                          placeholder="Refinement prompt (e.g. 'two columns', 'add sidebar')"
+                          className="flex-1 min-w-[200px] px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        />
+                      </div>
+
+                      {step.wireframe && (
+                        <textarea
+                          value={step.wireframe}
+                          onChange={(e) => updateStep(step.id, 'wireframe', e.target.value)}
+                          rows={Math.min(Math.max(step.wireframe.split('\n').length + 1, 8), 30)}
+                          className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 font-mono leading-relaxed"
+                          style={{ tabSize: 4 }}
+                        />
+                      )}
+
+                      {/* Bottom bar: Delete left, Move center, Update right */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-slate-600/50">
+                        <button onClick={() => { deleteStep(step.id); setExpandedStep(null); }} className="px-2.5 py-1.5 text-xs rounded border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium">Delete</button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => moveStep(index, -1)} disabled={index === 0} className="px-3 py-1.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-700 font-medium">⌃ Up</button>
+                          <button onClick={() => moveStep(index, 1)} disabled={index === steps.length - 1} className="px-3 py-1.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-700 font-medium">⌄ Down</button>
+                        </div>
+                        <button
+                          onClick={() => generateWireframe(step.id)}
+                          disabled={wireframeGenerating === step.id || !githubAIKey}
+                          className="px-3 py-1.5 text-xs bg-slate-800 dark:bg-slate-700 text-white rounded hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          {wireframeGenerating === step.id ? 'Updating...' : step.wireframe ? 'Update wireframe' : 'Generate wireframe'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {index < steps.length - 1 && (
+                <span className="text-slate-300 dark:text-slate-600 text-sm my-1">↓</span>
+              )}
+            </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
+
+    {steps.length === 0 && !iaGenerating && (
+      <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+        <p className="text-3xl mb-2">◧</p>
+        <p className="text-sm">Generate an IA sitemap from your brief data, or add screens manually.</p>
       </div>
     )}
   </div>
   );
 };
 
-const SummarySection = ({ data, language, onChange, onGenerateAIBrief }) => {
+const AI_BRIEF_SECTIONS = [
+  { id: 'overview', label: 'Overview', description: 'Feature name, description, stakeholders', recommended: true },
+  { id: 'problem', label: 'Problem & Purpose', description: 'Problem statement, business outcome, metrics', recommended: true },
+  { id: 'context', label: 'User Context', description: 'User segments, workflow, workarounds', recommended: true },
+  { id: 'assumptions', label: 'Assumptions', description: 'Validated and unvalidated assumptions', recommended: false },
+  { id: 'edges', label: 'Edge Cases', description: 'Technical constraints and edge cases', recommended: false },
+  { id: 'scope', label: 'Scope & Versions', description: 'Scope items, versioning, technical notes', recommended: true },
+  { id: 'acceptance', label: 'Acceptance Criteria', description: 'Must have, should have, nice to have', recommended: true },
+  { id: 'questions', label: 'Open Questions', description: 'Pending and resolved questions', recommended: false },
+  { id: 'notes', label: 'Notes', description: 'Additional context and notes', recommended: false },
+  { id: 'research', label: 'User Research', description: 'Research plans, test scenarios, findings', recommended: false },
+  { id: 'mapping', label: 'Mapping', description: 'Figma/Figjam visual references (legacy)', recommended: false },
+  { id: 'designRefs', label: 'Design References', description: 'Figma files, Figjam boards, reference images', recommended: false },
+  { id: 'codeRefs', label: 'Code References', description: 'GitHub repos, prototypes, documentation', recommended: false },
+  { id: 'design', label: 'Design System', description: 'Design system, tokens, MCP config', recommended: true },
+  { id: 'wireframe', label: 'Structure', description: 'IA sitemap and ASCII wireframes', recommended: false },
+  { id: 'actions', label: 'Action Items', description: 'Task list and next steps', recommended: false },
+];
+
+const RECOMMENDED_SECTIONS = AI_BRIEF_SECTIONS.reduce((acc, s) => ({ ...acc, [s.id]: s.recommended }), {});
+
+const BRIEF_FILE_GROUPS = [
+  { id: 'core-brief', label: 'Core Brief', filename: 'core-brief', sections: ['overview', 'problem', 'context', 'scope', 'acceptance'], description: 'Primary design brief with problem, context, and requirements' },
+  { id: 'research', label: 'Research & Discovery', filename: 'research', sections: ['research', 'assumptions', 'questions', 'edges'], description: 'User research findings, assumptions, open questions, edge cases' },
+  { id: 'references', label: 'References', filename: 'references', sections: ['mapping', 'designRefs', 'codeRefs', 'design', 'wireframe'], description: 'Design files, code repos, design system, wireframes' },
+  { id: 'operational', label: 'Operational', filename: 'operational', sections: ['actions', 'notes'], description: 'Action items and additional notes' },
+];
+
+function estimateTokenCount(analysis, sectionIds) {
+  let wordCount = 0;
+  const countStr = (s) => { if (s?.trim()) wordCount += s.trim().split(/\s+/).length; };
+  const countArr = (arr, key) => { (arr || []).forEach(item => { if (key) countStr(item[key]); else Object.values(item).forEach(v => { if (typeof v === 'string') countStr(v); }); }); };
+  sectionIds.forEach(id => {
+    switch (id) {
+      case 'overview': Object.values(analysis.overview || {}).forEach(countStr); break;
+      case 'problem': Object.values(analysis.problem || {}).forEach(countStr); break;
+      case 'context': Object.values(analysis.context || {}).forEach(countStr); break;
+      case 'scope': Object.values(analysis.scope || {}).forEach(v => { if (typeof v === 'string') countStr(v); }); countArr(analysis.scope?.items); break;
+      case 'acceptance': countArr(analysis.acceptanceCriteria, 'text'); break;
+      case 'assumptions': countArr(analysis.assumptions, 'text'); break;
+      case 'questions': countArr(analysis.questions, 'text'); break;
+      case 'edges': Object.values(analysis.edges || {}).forEach(e => countStr(e.notes)); break;
+      case 'research': (analysis.research?.rounds || []).forEach(r => { countStr(r.findings); countStr(r.recommendations); countStr(r.hypotheses); }); break;
+      case 'designRefs': countArr(analysis.designRefs?.references, 'label'); break;
+      case 'codeRefs': countArr(analysis.codeRefs?.repos, 'notes'); break;
+      case 'design': Object.values(analysis.design || {}).forEach(countStr); break;
+      case 'wireframe': (analysis.wireframe?.iaSteps || []).forEach(s => { countStr(s.wireframe); countStr(s.description); }); break;
+      case 'actions': countArr(analysis.actions, 'text'); break;
+      case 'notes': countStr(analysis.notes); break;
+    }
+  });
+  return Math.round(wordCount * 1.3); // ~1.3 tokens per word for structured markdown
+}
+
+const SummarySection = ({ data, language, onChange, onGenerateAIBrief, analysis }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const included = data.includedSections || { ...RECOMMENDED_SECTIONS };
+  
+  const toggleSection = (id) => {
+    onChange({ ...data, includedSections: { ...included, [id]: !included[id] } });
+  };
+  
+  const allSelected = AI_BRIEF_SECTIONS.every(s => included[s.id]);
+  const toggleAll = () => {
+    const newVal = !allSelected;
+    const newIncluded = AI_BRIEF_SECTIONS.reduce((acc, s) => ({ ...acc, [s.id]: newVal }), {});
+    onChange({ ...data, includedSections: newIncluded });
+  };
+  const resetToRecommended = () => {
+    onChange({ ...data, includedSections: { ...RECOMMENDED_SECTIONS } });
+  };
+  const isRecommended = AI_BRIEF_SECTIONS.every(s => !!included[s.id] === !!s.recommended);
+  
   return (
   <div>
     <SectionHeader title={t.sections.summary} description="Your overall assessment and what needs to happen next." />
@@ -2239,16 +3530,143 @@ const SummarySection = ({ data, language, onChange, onGenerateAIBrief }) => {
     <Field label={t.fields.concerns} multiline hint="What worries you most about this requirement?" value={data.concerns} onChange={(v) => onChange({ ...data, concerns: v })} />
     <Field label={t.fields.nextSteps} multiline hint="What actions should happen before design work begins?" rows={4} value={data.nextSteps} onChange={(v) => onChange({ ...data, nextSteps: v })} />
     
-    {/* AI Design Brief Button */}
+    {/* Tasks for AI */}
     <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+      <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">Tasks for AI</h3>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Define what the AI should do and which sections to include in the design brief.</p>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">AI Task Description</label>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">Describe the specific task for the AI design tool. Be concrete about what to design, which patterns to follow, and any constraints.</p>
+        <AutoResizeTextarea
+          className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+          rows={4}
+          value={data.aiTask || ""}
+          onChange={(e) => onChange({ ...data, aiTask: e.target.value })}
+          placeholder={"e.g., Create a responsive email settings page with a 2FA toggle. Follow the existing design system patterns. Include error states for invalid email and failed verification. Target both B2B admin and B2C end-user flows."}
+        />
+      </div>
+      
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Sections to Include in Brief</label>
+          <div className="flex items-center gap-3">
+            {!isRecommended && (
+              <button
+                onClick={resetToRecommended}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors font-medium"
+              >
+                Reset to recommended
+              </button>
+            )}
+            <button
+              onClick={toggleAll}
+              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            >
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Only checked sections will be included in the exported .md file. Exclude empty or irrelevant sections to keep the brief focused.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {AI_BRIEF_SECTIONS.map(section => (
+            <label
+              key={section.id}
+              className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                included[section.id]
+                  ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-300 dark:border-slate-600'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-60'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={!!included[section.id]}
+                onChange={() => toggleSection(section.id)}
+                className="mt-0.5 rounded border-slate-300 dark:border-slate-500 text-slate-800 dark:text-slate-300 focus:ring-slate-400"
+              />
+              <div>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {section.label}
+                  {section.recommended && <span className="ml-1.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">recommended</span>}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{section.description}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+    
+    {/* Multi-file split proposal */}
+    {(() => {
+      const selectedIds = AI_BRIEF_SECTIONS.filter(s => included[s.id]).map(s => s.id);
+      const activeGroups = BRIEF_FILE_GROUPS.filter(g => g.sections.some(s => selectedIds.includes(s)));
+      const multiFileMode = data.multiFileMode || false;
+      const showProposal = activeGroups.length >= 2 && selectedIds.length >= 5;
+      
+      if (!showProposal) return null;
+      
+      const taskSlug = (analysis?.name || 'untitled').replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40);
+      
+      return (
+        <div className="mt-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Suggested file split</h4>
+            <button
+              onClick={() => onChange({ ...data, multiFileMode: !multiFileMode })}
+              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                multiFileMode
+                  ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-600'
+                  : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600'
+              }`}
+            >
+              {multiFileMode ? 'Multi-file ✓' : 'Single file'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            With {selectedIds.length} sections selected across {activeGroups.length} groups, splitting into separate files keeps each within AI context window limits and groups related content for more focused processing.
+          </p>
+          <div className="space-y-2">
+            {activeGroups.map(group => {
+              const groupSections = group.sections.filter(s => selectedIds.includes(s));
+              const tokens = analysis ? estimateTokenCount(analysis, groupSections) : 0;
+              return (
+                <div key={group.id} className="flex items-start gap-3 p-2 rounded bg-white dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{taskSlug}-{group.filename}.md</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {groupSections.map(s => AI_BRIEF_SECTIONS.find(bs => bs.id === s)?.label || s).join(', ')}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 tabular-nums">
+                    ~{tokens > 0 ? tokens.toLocaleString() : '—'} tokens
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">
+            Token estimates are approximate (~1.3 tokens/word). Each file includes a header referencing the companion files.
+          </p>
+        </div>
+      );
+    })()}
+    
+    {/* AI Design Brief Button */}
+    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
       <button
         onClick={onGenerateAIBrief}
         className="w-full px-4 py-3 text-sm bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 dark:from-purple-700 dark:to-blue-700 dark:hover:from-purple-800 dark:hover:to-blue-800 text-white rounded-lg transition-all font-medium flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
       >
-        Create Design Brief for AI
+        {(() => {
+          const selectedIds = AI_BRIEF_SECTIONS.filter(s => included[s.id]).map(s => s.id);
+          const activeGroups = BRIEF_FILE_GROUPS.filter(g => g.sections.some(s => selectedIds.includes(s)));
+          if (data.multiFileMode && activeGroups.length >= 2) return `Generate Brief (${activeGroups.length} files)`;
+          return 'Create Design Brief for AI';
+        })()}
       </button>
       <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
-        Generates an AI-optimized design context file for tools like Claude, ChatGPT, or Copilot
+        For internally approved AI assisted design tools (currently Figma Make, VS code and CoPilot)
       </p>
     </div>
   </div>
@@ -2288,7 +3706,7 @@ const ImportMarkdownModal = ({ isOpen, onClose, onImportNew, onImportExisting, a
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-8" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -2360,6 +3778,38 @@ const PasteAnalyzeModal = ({
   onSetMergeMode
 }) => {
   const [activeTab, setActiveTab] = useState('text');
+  const [isDragging, setIsDragging] = useState(false);
+  const imagePasteAreaRef = useRef(null);
+  
+  // Auto-focus image paste area when image tab is activated
+  useEffect(() => {
+    if (activeTab === 'image' && imagePasteAreaRef.current) {
+      imagePasteAreaRef.current.focus();
+    }
+  }, [activeTab]);
+  
+  // Document-level paste listener when image tab is active and modal is open
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'image') return;
+    const handleDocPaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => onImageChange(event.target.result);
+            reader.readAsDataURL(file);
+          }
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', handleDocPaste);
+    return () => document.removeEventListener('paste', handleDocPaste);
+  }, [isOpen, activeTab, onImageChange]);
   
   if (!isOpen) return null;
 
@@ -2378,35 +3828,58 @@ const PasteAnalyzeModal = ({
     console.log('[PASTE MODAL] activeAnalysis.overview:', activeAnalysis.overview);
     console.log('[PASTE MODAL] activeAnalysis.problem:', activeAnalysis.problem);
     
+    // Helper to safely convert to string
+    const toSafeString = (val) => {
+      if (val == null) return '';
+      if (typeof val === 'string') return val;
+      if (Array.isArray(val)) return val.join('\n');
+      if (typeof val === 'object') return JSON.stringify(val, null, 2);
+      return String(val);
+    };
+    
     // Map field names to analysis structure
     if (fieldName === 'featureName') {
-      const value = activeAnalysis.overview?.featureName || '';
+      const value = toSafeString(activeAnalysis.overview?.featureName);
       console.log('[PASTE MODAL] featureName value:', value);
       return value;
     }
-    if (fieldName === 'date') return activeAnalysis.overview?.date || '';
-    if (fieldName === 'requestor') return activeAnalysis.overview?.requestor || '';
-    if (fieldName === 'origin') return activeAnalysis.overview?.origin || '';
+    if (fieldName === 'date') return toSafeString(activeAnalysis.overview?.date);
+    if (fieldName === 'requestor') return toSafeString(activeAnalysis.overview?.requestor);
+    if (fieldName === 'origin') return toSafeString(activeAnalysis.overview?.origin);
     if (fieldName === 'description') {
-      const value = activeAnalysis.overview?.description || '';
+      const value = toSafeString(activeAnalysis.overview?.description);
       console.log('[PASTE MODAL] description value:', value);
       return value;
     }
     if (fieldName === 'problem') {
-      const value = activeAnalysis.problem?.problem || '';
+      const value = toSafeString(activeAnalysis.problem?.problem);
       console.log('[PASTE MODAL] problem value:', value);
       return value;
     }
-    if (fieldName === 'who') return activeAnalysis.problem?.who || '';
-    if (fieldName === 'outcome') return activeAnalysis.problem?.outcome || '';
-    if (fieldName === 'segments') return activeAnalysis.context?.segments || '';
-    if (fieldName === 'workflow') return activeAnalysis.context?.workflow || '';
+    if (fieldName === 'who') return toSafeString(activeAnalysis.problem?.who);
+    if (fieldName === 'outcome') return toSafeString(activeAnalysis.problem?.outcome);
+    if (fieldName === 'segments') return toSafeString(activeAnalysis.context?.segments);
+    if (fieldName === 'workflow') return toSafeString(activeAnalysis.context?.workflow);
     
     return '';
   };
   
   // Component to render a field with existing content and merge options
   const FieldDisplay = ({ fieldName, value, section, sectionColor, label }) => {
+    // Helper to ensure value is always a string
+    const toSafeString = (val) => {
+      if (val == null) return '';
+      if (typeof val === 'string') return val;
+      if (Array.isArray(val)) return val.join('\n');
+      if (typeof val === 'object') return JSON.stringify(val, null, 2);
+      return String(val);
+    };
+    
+    const safeValue = toSafeString(value);
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(safeValue);
+    
     const existingContent = getExistingContent(fieldName);
     const hasExisting = existingContent && existingContent.trim().length > 0;
     const mergeMode = mergeModes[fieldName] || 'replace';
@@ -2420,6 +3893,21 @@ const PasteAnalyzeModal = ({
       mergeMode
     });
     
+    // Update editValue when value prop changes
+    useEffect(() => {
+      setEditValue(toSafeString(value));
+    }, [value]);
+    
+    const handleSave = () => {
+      onUpdateField(fieldName, editValue);
+      setIsEditing(false);
+    };
+    
+    const handleCancel = () => {
+      setEditValue(toSafeString(value));
+      setIsEditing(false);
+    };
+    
     return (
       <div className={`border border-${sectionColor}-200 dark:border-${sectionColor}-800 rounded-lg p-3 bg-${sectionColor}-50 dark:bg-${sectionColor}-900/20`}>
         <div className="flex items-center justify-between mb-1">
@@ -2429,15 +3917,28 @@ const PasteAnalyzeModal = ({
             </span>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
           </div>
-          <button
-            onClick={() => onDeleteField(fieldName)}
-            className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-            title="Delete this field"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                title="Edit this field"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            ) : null}
+            <button
+              onClick={() => onDeleteField(fieldName)}
+              className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              title="Delete this field"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         
         {/* Show existing content if any */}
@@ -2476,33 +3977,85 @@ const PasteAnalyzeModal = ({
               />
               <span className="text-xs text-slate-600 dark:text-slate-400">Add to existing</span>
             </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`merge-${fieldName}`}
+                value="skip"
+                checked={mergeMode === 'skip'}
+                onChange={() => onSetMergeMode(fieldName, 'skip')}
+                className="text-slate-800 focus:ring-slate-400"
+              />
+              <span className="text-xs text-slate-600 dark:text-slate-400">Skip</span>
+            </label>
           </div>
         )}
         
         <div className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">New content:</div>
-        <div className={`text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap ${value.length > 100 ? 'max-h-24 overflow-y-auto' : ''}`}>
-          {value}
-        </div>
+        {isEditing ? (
+          <div>
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+              rows={Math.min(Math.max(3, editValue.split('\n').length), 10)}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleSave}
+                className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-xs font-medium bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 rounded transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={`text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap ${safeValue.length > 100 ? 'max-h-24 overflow-y-auto' : ''}`}>
+            {safeValue}
+          </div>
+        )}
       </div>
     );
   };
   
-  const handleImagePaste = async (e) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    
-    for (let item of items) {
-      if (item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            onImageChange(event.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer?.files;
+    if (!files) return;
+    for (let file of files) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => onImageChange(event.target.result);
+        reader.readAsDataURL(file);
+        return;
       }
     }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
   
   const handleImageUpload = (e) => {
@@ -2524,7 +4077,7 @@ const PasteAnalyzeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-8" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -2594,8 +4147,20 @@ const PasteAnalyzeModal = ({
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Paste or Upload Image</label>
               <div 
-                className="w-full min-h-[240px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center p-4"
-                onPaste={handleImagePaste}
+                ref={imagePasteAreaRef}
+                className={`w-full min-h-[240px] border-2 border-dashed rounded-lg flex items-center justify-center p-4 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 cursor-pointer transition-colors ${
+                  isDragging
+                    ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                    : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50'
+                }`}
+                onDrop={handleImageDrop}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onClick={() => imagePasteAreaRef.current?.focus()}
+                tabIndex={0}
+                role="button"
+                aria-label="Drop or paste image here"
               >
                 {pastedImage ? (
                   <div className="w-full">
@@ -2612,7 +4177,7 @@ const PasteAnalyzeModal = ({
                     <svg className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">Press Ctrl+V (or Cmd+V) to paste image</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2 font-medium">{isDragging ? 'Drop image here' : 'Drag & drop, or paste (Cmd+V) an image'}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">or</p>
                     <label className="inline-block px-4 py-2 text-sm bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors cursor-pointer">
                       Choose File
@@ -3073,25 +4638,34 @@ const AudioAnalysisModal = ({
   const getExistingContent = (section) => {
     if (!activeAnalysis) return '';
     
+    // Helper to safely convert to string
+    const toSafeString = (val) => {
+      if (val == null) return '';
+      if (typeof val === 'string') return val;
+      if (Array.isArray(val)) return val.join('\n');
+      if (typeof val === 'object') return JSON.stringify(val, null, 2);
+      return String(val);
+    };
+    
     // Direct fields
     if (activeAnalysis[section]) {
-      return typeof activeAnalysis[section] === 'string' ? activeAnalysis[section] : '';
+      return toSafeString(activeAnalysis[section]);
     }
     
     // Nested fields
-    if (section === 'description') return activeAnalysis.overview?.description || '';
-    if (section === 'featureName') return activeAnalysis.overview?.featureName || '';
-    if (section === 'problem') return activeAnalysis.problem?.problem || '';
-    if (section === 'who') return activeAnalysis.problem?.who || '';
-    if (section === 'outcome') return activeAnalysis.problem?.outcome || '';
-    if (section === 'segments') return activeAnalysis.context?.segments || '';
-    if (section === 'workflow') return activeAnalysis.context?.workflow || '';
+    if (section === 'description') return toSafeString(activeAnalysis.overview?.description);
+    if (section === 'featureName') return toSafeString(activeAnalysis.overview?.featureName);
+    if (section === 'problem') return toSafeString(activeAnalysis.problem?.problem);
+    if (section === 'who') return toSafeString(activeAnalysis.problem?.who);
+    if (section === 'outcome') return toSafeString(activeAnalysis.problem?.outcome);
+    if (section === 'segments') return toSafeString(activeAnalysis.context?.segments);
+    if (section === 'workflow') return toSafeString(activeAnalysis.context?.workflow);
     
     return '';
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-8" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -3183,6 +4757,15 @@ const AudioAnalysisModal = ({
                   const hasExisting = existingContent && existingContent.trim().length > 0;
                   const mergeMode = mergeModes[section] || 'replace';
                   
+                  // Ensure content is a string
+                  const safeContent = (() => {
+                    if (content == null) return '';
+                    if (typeof content === 'string') return content;
+                    if (Array.isArray(content)) return content.join('\n');
+                    if (typeof content === 'object') return JSON.stringify(content, null, 2);
+                    return String(content);
+                  })();
+                  
                   return (
                     <div key={section} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700">
                       <div className="flex items-center gap-2 mb-2">
@@ -3230,12 +4813,23 @@ const AudioAnalysisModal = ({
                             />
                             <span className="text-xs text-slate-600 dark:text-slate-400">Add to existing</span>
                           </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`merge-${section}`}
+                              value="skip"
+                              checked={mergeMode === 'skip'}
+                              onChange={() => onSetMergeMode(section, 'skip')}
+                              className="text-slate-800 focus:ring-slate-400"
+                            />
+                            <span className="text-xs text-slate-600 dark:text-slate-400">Skip</span>
+                          </label>
                         </div>
                       )}
                       
                       <div className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">New content:</div>
                       <textarea
-                        value={content}
+                        value={safeContent}
                         onChange={(e) => onUpdateSuggestion(section, e.target.value)}
                         className="w-full px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 resize-none"
                         rows={3}
@@ -3302,6 +4896,548 @@ const AudioAnalysisModal = ({
   );
 };
 
+// --- Mode Switcher (Segmented Control) ---
+const ModeSwitch = ({ mode, onChange }) => {
+  return (
+    <div className="inline-flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
+      <button
+        onClick={() => onChange("discovery")}
+        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+          mode === "discovery"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+        }`}
+        aria-pressed={mode === "discovery"}
+      >
+        Discovery
+      </button>
+      <button
+        onClick={() => onChange("design-specs")}
+        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+          mode === "design-specs"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+        }`}
+        aria-pressed={mode === "design-specs"}
+      >
+        Design Specs
+      </button>
+    </div>
+  );
+};
+
+// --- Discovery Table Section ---
+const DiscoveryTableSection = ({ data, onChange }) => {
+  const [draggedRowIndex, setDraggedRowIndex] = useState(null);
+  const [columnOrganizer, setColumnOrganizer] = useState(false);
+  
+  // Initialize data structure if empty
+  const tableData = data || {
+    columns: [
+      { id: generateId(), name: "Opportunity", visible: true },
+      { id: generateId(), name: "Priority (Now, Next, Later)", visible: true },
+      { id: generateId(), name: "Objectives", visible: true },
+      { id: generateId(), name: "Analysis", visible: true },
+      { id: generateId(), name: "Evidence", visible: true },
+      { id: generateId(), name: "Going forward", visible: true },
+      { id: generateId(), name: "Solutions", visible: true },
+      { id: generateId(), name: "Experiment", visible: true },
+    ],
+    rows: []
+  };
+  
+  const updateData = (updates) => {
+    onChange({ ...tableData, ...updates });
+  };
+  
+  const addRow = () => {
+    const newRow = {
+      id: generateId(),
+      cells: tableData.columns.reduce((acc, col) => ({ ...acc, [col.id]: "" }), {})
+    };
+    updateData({ rows: [...tableData.rows, newRow] });
+  };
+  
+  const updateCell = (rowId, columnId, value) => {
+    const updatedRows = tableData.rows.map(row =>
+      row.id === rowId
+        ? { ...row, cells: { ...row.cells, [columnId]: value } }
+        : row
+    );
+    updateData({ rows: updatedRows });
+  };
+  
+  const deleteRow = (rowId) => {
+    updateData({ rows: tableData.rows.filter(row => row.id !== rowId) });
+  };
+  
+  const addColumn = () => {
+    const newColumn = { id: generateId(), name: "New Column", visible: true };
+    const updatedRows = tableData.rows.map(row => ({
+      ...row,
+      cells: { ...row.cells, [newColumn.id]: "" }
+    }));
+    updateData({ 
+      columns: [...tableData.columns, newColumn],
+      rows: updatedRows
+    });
+  };
+  
+  const updateColumnName = (columnId, name) => {
+    const updatedColumns = tableData.columns.map(col =>
+      col.id === columnId ? { ...col, name } : col
+    );
+    updateData({ columns: updatedColumns });
+  };
+  
+  const toggleColumnVisibility = (columnId) => {
+    const updatedColumns = tableData.columns.map(col =>
+      col.id === columnId ? { ...col, visible: !col.visible } : col
+    );
+    updateData({ columns: updatedColumns });
+  };
+  
+  const deleteColumn = (columnId) => {
+    const updatedColumns = tableData.columns.filter(col => col.id !== columnId);
+    const updatedRows = tableData.rows.map(row => {
+      const newCells = { ...row.cells };
+      delete newCells[columnId];
+      return { ...row, cells: newCells };
+    });
+    updateData({ columns: updatedColumns, rows: updatedRows });
+  };
+  
+  const handleDragStart = (e, index) => {
+    setDraggedRowIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedRowIndex === null || draggedRowIndex === index) return;
+    
+    const newRows = [...tableData.rows];
+    const draggedRow = newRows[draggedRowIndex];
+    newRows.splice(draggedRowIndex, 1);
+    newRows.splice(index, 0, draggedRow);
+    
+    updateData({ rows: newRows });
+    setDraggedRowIndex(index);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedRowIndex(null);
+  };
+  
+  const visibleColumns = tableData.columns.filter(col => col.visible);
+  
+  return (
+    <div>
+      <SectionHeader 
+        title="Discovery Research" 
+        description="Track opportunities, priorities, objectives, and evidence for informed decision-making."
+      />
+      
+      {/* Controls */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          <button
+            onClick={addRow}
+            className="px-3 py-2 text-sm bg-slate-800 dark:bg-slate-600 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors font-medium"
+          >
+            + Add Row
+          </button>
+          <button
+            onClick={addColumn}
+            className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium"
+          >
+            + Add Column
+          </button>
+        </div>
+        <button
+          onClick={() => setColumnOrganizer(!columnOrganizer)}
+          className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Organize Columns
+        </button>
+      </div>
+      
+      {/* Column Organizer */}
+      {columnOrganizer && (
+        <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Column Visibility</h3>
+          <div className="space-y-2">
+            {tableData.columns.map((col) => (
+              <div key={col.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={col.visible}
+                    onChange={() => toggleColumnVisibility(col.id)}
+                    className="w-4 h-4 text-slate-800 dark:text-slate-600 focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 rounded"
+                  />
+                  <input
+                    type="text"
+                    value={col.name}
+                    onChange={(e) => updateColumnName(col.id, e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                  />
+                </div>
+                <button
+                  onClick={() => deleteColumn(col.id)}
+                  className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title="Delete column"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Table */}
+      {tableData.rows.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
+          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <p className="text-sm">No data yet</p>
+          <p className="text-xs mt-1">Add rows to start tracking discovery research</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+          <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-800">
+              <tr>
+                <th className="w-12 px-3 py-2 text-left"></th>
+                {visibleColumns.map((col) => (
+                  <th key={col.id} className="px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200 dark:border-slate-700 min-w-[150px]">
+                    {col.name}
+                  </th>
+                ))}
+                <th className="w-12 px-3 py-2 text-left border-l border-slate-200 dark:border-slate-700"></th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-slate-900">
+              {tableData.rows.map((row, rowIndex) => (
+                <tr
+                  key={row.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, rowIndex)}
+                  onDragOver={(e) => handleDragOver(e, rowIndex)}
+                  onDragEnd={handleDragEnd}
+                  className={`border-t border-slate-200 dark:border-slate-700 ${draggedRowIndex === rowIndex ? 'opacity-50' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/50`}
+                >
+                  <td className="px-3 py-2 cursor-move">
+                    <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                    </svg>
+                  </td>
+                  {visibleColumns.map((col) => (
+                    <td key={col.id} className="px-3 py-2 border-l border-slate-200 dark:border-slate-700">
+                      <textarea
+                        value={row.cells[col.id] || ""}
+                        onChange={(e) => updateCell(row.id, col.id, e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 rounded resize-none"
+                        rows={2}
+                        placeholder="Enter value..."
+                      />
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 border-l border-slate-200 dark:border-slate-700">
+                    <button
+                      onClick={() => deleteRow(row.id)}
+                      className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      title="Delete row"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Opportunity Solution Tree Section ---
+const OpportunitySolutionTreeSection = ({ data, onChange }) => {
+  // Initialize data structure if empty
+  const treeData = data || {
+    outcome: { id: "outcome", text: "Reduce operational friction for B2B admins" },
+    opportunities: []
+  };
+  
+  const updateData = (updates) => {
+    onChange({ ...treeData, ...updates });
+  };
+  
+  const updateOutcome = (text) => {
+    updateData({ outcome: { ...treeData.outcome, text } });
+  };
+  
+  const addOpportunity = () => {
+    const newOpportunity = {
+      id: generateId(),
+      text: "New Opportunity",
+      solutions: []
+    };
+    updateData({ opportunities: [...treeData.opportunities, newOpportunity] });
+  };
+  
+  const updateOpportunity = (oppId, text) => {
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId ? { ...opp, text } : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const deleteOpportunity = (oppId) => {
+    updateData({ opportunities: treeData.opportunities.filter(opp => opp.id !== oppId) });
+  };
+  
+  const addSolution = (oppId) => {
+    const newSolution = {
+      id: generateId(),
+      text: "New Solution",
+      experiments: []
+    };
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId ? { ...opp, solutions: [...opp.solutions, newSolution] } : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const updateSolution = (oppId, solId, text) => {
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId
+        ? { ...opp, solutions: opp.solutions.map(sol => sol.id === solId ? { ...sol, text } : sol) }
+        : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const deleteSolution = (oppId, solId) => {
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId ? { ...opp, solutions: opp.solutions.filter(sol => sol.id !== solId) } : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const addExperiment = (oppId, solId) => {
+    const newExperiment = {
+      id: generateId(),
+      text: "New Experiment"
+    };
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId
+        ? {
+            ...opp,
+            solutions: opp.solutions.map(sol =>
+              sol.id === solId ? { ...sol, experiments: [...sol.experiments, newExperiment] } : sol
+            )
+          }
+        : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const updateExperiment = (oppId, solId, expId, text) => {
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId
+        ? {
+            ...opp,
+            solutions: opp.solutions.map(sol =>
+              sol.id === solId
+                ? { ...sol, experiments: sol.experiments.map(exp => exp.id === expId ? { ...exp, text } : exp) }
+                : sol
+            )
+          }
+        : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  const deleteExperiment = (oppId, solId, expId) => {
+    const updated = treeData.opportunities.map(opp =>
+      opp.id === oppId
+        ? {
+            ...opp,
+            solutions: opp.solutions.map(sol =>
+              sol.id === solId ? { ...sol, experiments: sol.experiments.filter(exp => exp.id !== expId) } : sol
+            )
+          }
+        : opp
+    );
+    updateData({ opportunities: updated });
+  };
+  
+  return (
+    <div>
+      <SectionHeader 
+        title="Opportunity Solution Tree" 
+        description="Map the desired outcome to opportunities, solutions, and experiments for strategic decision-making."
+      />
+      
+      {/* Outcome */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Desired Outcome</h3>
+        </div>
+        <div className="flex justify-center">
+          <div className="w-full max-w-md">
+            <textarea
+              value={treeData.outcome.text}
+              onChange={(e) => updateOutcome(e.target.value)}
+              className="w-full px-4 py-3 text-center font-medium text-slate-900 dark:text-slate-100 bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600 resize-none"
+              rows={2}
+              placeholder="Enter your desired business outcome..."
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Add Opportunity Button */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={addOpportunity}
+          className="px-4 py-2 text-sm bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors font-medium flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Opportunity
+        </button>
+      </div>
+      
+      {/* Opportunities */}
+      {treeData.opportunities.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
+          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-sm">No opportunities yet</p>
+          <p className="text-xs mt-1">Add opportunities to start building your solution tree</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {treeData.opportunities.map((opp) => (
+            <div key={opp.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-6 bg-slate-50 dark:bg-slate-800/50">
+              {/* Opportunity */}
+              <div className="mb-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-1">
+                    <textarea
+                      value={opp.text}
+                      onChange={(e) => updateOpportunity(opp.id, e.target.value)}
+                      className="w-full px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 dark:focus:ring-purple-600 resize-none"
+                      rows={2}
+                      placeholder="Describe the opportunity..."
+                    />
+                  </div>
+                  <button
+                    onClick={() => deleteOpportunity(opp.id)}
+                    className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    title="Delete opportunity"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+                <button
+                  onClick={() => addSolution(opp.id)}
+                  className="px-3 py-1.5 text-xs bg-emerald-600 dark:bg-emerald-700 text-white rounded-md hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors font-medium"
+                >
+                  + Add Solution
+                </button>
+              </div>
+              
+              {/* Solutions */}
+              {opp.solutions.length > 0 && (
+                <div className="pl-6 space-y-4 border-l-2 border-purple-300 dark:border-purple-700">
+                  {opp.solutions.map((sol) => (
+                    <div key={sol.id} className="bg-white dark:bg-slate-900 rounded-lg p-4">
+                      {/* Solution */}
+                      <div className="mb-3">
+                        <div className="flex items-start gap-3 mb-2">
+                          <div className="flex-1">
+                            <textarea
+                              value={sol.text}
+                              onChange={(e) => updateSolution(opp.id, sol.id, e.target.value)}
+                              className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-600 resize-none"
+                              rows={2}
+                              placeholder="Describe the solution..."
+                            />
+                          </div>
+                          <button
+                            onClick={() => deleteSolution(opp.id, sol.id)}
+                            className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                            title="Delete solution"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => addExperiment(opp.id, sol.id)}
+                          className="px-2.5 py-1 text-xs bg-sky-600 dark:bg-sky-700 text-white rounded-md hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors font-medium"
+                        >
+                          + Add Experiment
+                        </button>
+                      </div>
+                      
+                      {/* Experiments */}
+                      {sol.experiments.length > 0 && (
+                        <div className="pl-4 space-y-2 border-l-2 border-emerald-300 dark:border-emerald-700">
+                          {sol.experiments.map((exp) => (
+                            <div key={exp.id} className="flex items-start gap-2">
+                              <div className="flex-1">
+                                <textarea
+                                  value={exp.text}
+                                  onChange={(e) => updateExperiment(opp.id, sol.id, exp.id, e.target.value)}
+                                  className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-sky-100 dark:bg-sky-900/40 border border-sky-300 dark:border-sky-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-600 resize-none"
+                                  rows={1}
+                                  placeholder="Describe the experiment..."
+                                />
+                              </div>
+                              <button
+                                onClick={() => deleteExperiment(opp.id, sol.id, exp.id)}
+                                className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors mt-2"
+                                title="Delete experiment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function RequirementAnalyzer() {
@@ -3328,7 +5464,7 @@ export default function RequirementAnalyzer() {
   const [githubAIKey, setGitHubAIKey] = useState(() => localStorage.getItem("githubAIKey") || "");
   const [aiSuggestions, setAiSuggestions] = useState({});
   const [selectedSections, setSelectedSections] = useState({});
-  const [mergeModes, setMergeModes] = useState({}); // 'replace' or 'add' for each field with existing content
+  const [mergeModes, setMergeModes] = useState({}); // 'replace', 'add', or 'skip' for each field with existing content
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importedMarkdown, setImportedMarkdown] = useState("");
   const [importMode, setImportMode] = useState(""); // "new" or "existing"
@@ -3338,8 +5474,17 @@ export default function RequirementAnalyzer() {
   const [pastedPdf, setPastedPdf] = useState(null);
   const [pasteAnalyzing, setPasteAnalyzing] = useState(false);
   const [pasteResults, setPasteResults] = useState(null);
-  const [pasteMergeModes, setPasteMergeModes] = useState({}); // 'replace' or 'add' for paste results
+  const [pasteMergeModes, setPasteMergeModes] = useState({}); // 'replace', 'add', or 'skip' for paste results
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+  
+  // Global app mode: Discovery vs Design Specs
+  const [appMode, setAppMode] = useState(() => localStorage.getItem("appMode") || "design-specs");
+  
+  // AI Chat state (ephemeral — cleared on reload and task switch)
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState("actions"); // 'actions' | 'chat'
+  const chatEndRef = useRef(null);
   
   const fileInputRef = useRef(null);
 
@@ -3367,23 +5512,38 @@ export default function RequirementAnalyzer() {
         
         if (saved) {
           console.log('[LOAD] Parsing data...');
-          const parsed = JSON.parse(saved);
-          console.log('[LOAD] Parsed analyses count:', Array.isArray(parsed) ? parsed.length : 0);
-          const migrated = Array.isArray(parsed) ? parsed.map(migrateAnalysis) : [];
-          if (migrated.length > 0) {
-            console.log('[LOAD] Setting analyses:', migrated.length, 'items');
-            setAnalyses(migrated);
-            if (!activeId || !migrated.find(a => a.id === activeId)) {
-              setActiveId(migrated[0].id);
+          try {
+            const parsed = JSON.parse(saved);
+            console.log('[LOAD] Parsed analyses count:', Array.isArray(parsed) ? parsed.length : 0);
+            const migrated = Array.isArray(parsed) ? parsed.map(migrateAnalysis) : [];
+            if (migrated.length > 0) {
+              console.log('[LOAD] Setting analyses:', migrated.length, 'items');
+              setAnalyses(migrated);
+              if (!activeId || !migrated.find(a => a.id === activeId)) {
+                setActiveId(migrated[0].id);
+              }
+            } else {
+              console.log('[LOAD] No valid analyses found after migration');
             }
-          } else {
-            console.log('[LOAD] No valid analyses found after migration');
+          } catch (parseError) {
+            console.error('[LOAD] Failed to parse saved data, clearing corrupted data:', parseError);
+            // Clear corrupted data
+            localStorage.removeItem("requirementAnalyses");
+            secureStorage.removeItem("requirementAnalyses");
+            // Keep default analyses
           }
         } else {
           console.log('[LOAD] No saved data, using defaults');
         }
       } catch (error) {
         console.error("[LOAD] Failed to load data:", error);
+        // Clear potentially corrupted data
+        try {
+          localStorage.removeItem("requirementAnalyses");
+          secureStorage.removeItem("requirementAnalyses");
+        } catch (clearError) {
+          console.error("[LOAD] Failed to clear data:", clearError);
+        }
         // Keep default data on error
       } finally {
         console.log('[LOAD] Load complete, setting dataLoaded = true');
@@ -3405,6 +5565,11 @@ export default function RequirementAnalyzer() {
     }
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
+
+  // Persist app mode
+  useEffect(() => {
+    localStorage.setItem("appMode", appMode);
+  }, [appMode]);
 
   // Load from URL share link on mount
   useEffect(() => {
@@ -3474,6 +5639,12 @@ export default function RequirementAnalyzer() {
     }
   }, [githubAIKey]);
 
+  // Reset chat messages when switching tasks
+  useEffect(() => {
+    setChatMessages([]);
+    setChatLoading(false);
+  }, [activeId]);
+
   const active = useMemo(() => analyses.find((a) => a.id === activeId), [analyses, activeId]);
 
   const filteredAnalyses = useMemo(() => {
@@ -3503,6 +5674,134 @@ export default function RequirementAnalyzer() {
     },
     [activeId]
   );
+
+  // --- AI Chat ---
+  const sendChatMessage = useCallback(async (userMessage) => {
+    if (!githubAIKey || !active) return;
+
+    const userMsg = { id: generateId(), role: 'user', content: userMessage };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatLoading(true);
+
+    // Serialize task data for context (strip large blobs)
+    const taskContext = { ...active };
+    delete taskContext.mapping; // figma url not useful for chat
+    delete taskContext.designRefs; // design ref URLs/images not useful for chat
+    delete taskContext.codeRefs; // code ref URLs not useful for chat
+
+    const systemPrompt = `You are an expert UX/product design assistant helping analyze a requirement task. You have full access to the current task data below.
+
+Current section the user is viewing: "${activeSection}"
+
+Task data:
+${JSON.stringify(taskContext, null, 2)}
+
+Your role:
+1. Answer questions about what is known and what is missing in this task
+2. Identify gaps, risks, or inconsistencies
+3. Suggest improvements to specific fields
+
+When the user asks you to make changes or you want to suggest edits, include a JSON block in your response with this exact format:
+\`\`\`json
+{"proposals": [{"section": "<top-level key like problem, overview, context, etc>", "field": "<field name within that section>", "value": "<proposed new value>", "reason": "<brief reason>"}]}
+\`\`\`
+
+For array fields (assumptions, questions, actions, acceptanceCriteria), use the field "_add" and provide an object to append.
+Only include the JSON block when proposing concrete changes. For general answers, just respond in plain text.
+Be concise and actionable. Respond in the same language the user writes in.`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...chatMessages.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user', content: userMessage }
+    ];
+
+    try {
+      const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${githubAIKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages,
+          temperature: 0.5,
+          max_tokens: 2000
+        })
+      });
+
+      if (!response.ok) throw new Error('API error: ' + response.status);
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      // Parse proposals from response
+      let proposals = null;
+      let displayContent = content;
+      const jsonMatch = content.match(/```json\s*\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[1]);
+          if (parsed.proposals && Array.isArray(parsed.proposals)) {
+            proposals = parsed.proposals.map(p => ({ ...p, applied: false }));
+          }
+          // Remove the JSON block from display text
+          displayContent = content.replace(/```json\s*\n?[\s\S]*?\n?```/, '').trim();
+        } catch { /* ignore parse errors, show raw */ }
+      }
+
+      const assistantMsg = {
+        id: generateId(),
+        role: 'assistant',
+        content: displayContent,
+        proposals
+      };
+      setChatMessages(prev => [...prev, assistantMsg]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMsg = {
+        id: generateId(),
+        role: 'assistant',
+        content: 'Sorry, something went wrong. Please try again.'
+      };
+      setChatMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setChatLoading(false);
+    }
+  }, [githubAIKey, active, activeSection, chatMessages]);
+
+  const handleApplyProposal = useCallback((messageId, proposalIndex) => {
+    setChatMessages(prev => prev.map(msg => {
+      if (msg.id !== messageId || !msg.proposals) return msg;
+      const proposal = msg.proposals[proposalIndex];
+      if (!proposal || proposal.applied) return msg;
+
+      // Apply the change
+      const section = proposal.section;
+      const field = proposal.field;
+      const value = proposal.value;
+
+      if (field === '_add') {
+        // Append to array field
+        const currentArray = active[section] || [];
+        if (Array.isArray(currentArray)) {
+          const newItem = { id: generateId(), ...value };
+          updateActive(section, [...currentArray, newItem]);
+        }
+      } else if (active[section] && typeof active[section] === 'object' && !Array.isArray(active[section])) {
+        // Update a field within an object section
+        updateActive(section, { ...active[section], [field]: value });
+      } else {
+        // Direct field update (e.g., notes)
+        updateActive(section, value);
+      }
+
+      // Mark proposal as applied
+      const newProposals = [...msg.proposals];
+      newProposals[proposalIndex] = { ...proposal, applied: true };
+      return { ...msg, proposals: newProposals };
+    }));
+  }, [active, updateActive]);
 
   const createNew = () => {
     const newA = createBlankAnalysis();
@@ -3541,28 +5840,52 @@ export default function RequirementAnalyzer() {
   const handleExportMd = () => { if (active) setShowExport(true); };
 
   const handleGenerateAIBrief = () => {
-    if (!active) return;
-    const a = analyses.find((x) => x.id === active);
-    if (!a) return;
+    console.log('[GENERATE AI BRIEF] Button clicked');
+    if (!active) {
+      console.error('[GENERATE AI BRIEF] No active analysis');
+      return;
+    }
+    const a = active; // active is already the analysis object
+    console.log('[GENERATE AI BRIEF] Active analysis:', a.name);
+    if (!a) {
+      console.error('[GENERATE AI BRIEF] Analysis is null');
+      return;
+    }
 
     const lines = [];
     const h = (t, level = 2) => lines.push(`\n${"#".repeat(level)} ${t}`);
     const f = (label, val) => { if (val?.trim()) lines.push(`**${label}:** ${val}`); };
+
+    const inc = a.summary?.includedSections || { ...RECOMMENDED_SECTIONS };
+    const isIncluded = (id) => !!inc[id];
 
     // Title and metadata
     lines.push(`# AI Design Brief: ${a.name || "Untitled Design Task"}`);
     lines.push(`*Generated: ${new Date().toLocaleDateString()} | Target Phase: ${a.phase || "Not set"}*`);
     if (a.jiraTicket) lines.push(`*JIRA: ${a.jiraTicket}*`);
 
+    // AI Task (always included if present)
+    if (a.summary?.aiTask?.trim()) {
+      h("AI Task");
+      lines.push(a.summary.aiTask);
+    }
+
     // Executive Summary
-    h("Executive Summary");
-    f("Feature", a.overview?.featureName);
-    f("Problem Statement", a.problem?.problem);
-    f("Business Outcome", a.problem?.outcome);
-    f("Success Metrics", a.problem?.metrics);
-    if (a.overview?.description) lines.push(`\n${a.overview.description}`);
+    if (isIncluded('overview') || isIncluded('problem')) {
+      h("Executive Summary");
+      if (isIncluded('overview')) {
+        f("Feature", a.overview?.featureName);
+      }
+      if (isIncluded('problem')) {
+        f("Problem Statement", a.problem?.problem);
+        f("Business Outcome", a.problem?.outcome);
+        f("Success Metrics", a.problem?.metrics);
+      }
+      if (isIncluded('overview') && a.overview?.description) lines.push(`\n${a.overview.description}`);
+    }
 
     // User Context & Research
+    if (isIncluded('context')) {
     h("User Context & Research");
     f("Target Users", a.problem?.who);
     f("User Segments", a.context?.segments);
@@ -3573,8 +5896,10 @@ export default function RequirementAnalyzer() {
       lines.push(`\n**Before/After Scenario:**`);
       lines.push(a.context.beforeAfter);
     }
+    }
 
     // Requirements & Scope
+    if (isIncluded('scope')) {
     h("Requirements & Scope");
     f("Affected Features", a.scope?.affected);
     f("New Patterns Needed", a.scope?.newPatterns);
@@ -3594,8 +5919,10 @@ export default function RequirementAnalyzer() {
         });
       });
     }
+    }
 
     // Acceptance Criteria
+    if (isIncluded('acceptance')) {
     h("Acceptance Criteria");
     if (!a.acceptanceCriteria || a.acceptanceCriteria.length === 0) {
       lines.push("*No acceptance criteria defined yet.*");
@@ -3626,8 +5953,10 @@ export default function RequirementAnalyzer() {
         });
       }
     }
+    }
 
-    // Visual References
+    // Visual References (legacy mapping)
+    if (isIncluded('mapping')) {
     h("Visual References & Mapping");
     if (a.mapping?.figmaUrl) {
       lines.push(`Figma: ${a.mapping.figmaUrl}`);
@@ -3635,33 +5964,105 @@ export default function RequirementAnalyzer() {
     } else {
       lines.push("*No visual references available yet.*");
     }
+    }
+
+    // Design References
+    if (isIncluded('designRefs')) {
+    h("Design References");
+    const refs = a.designRefs?.references || [];
+    if (refs.length > 0) {
+      refs.forEach((ref) => {
+        const typeLabel = DESIGN_REF_TYPE_LABELS[ref.type] || ref.type;
+        const statusLabel = ref.status === 'final' ? '✓ Final' : '⟳ WIP';
+        lines.push(`- **${ref.label || 'Untitled'}** [${typeLabel}] — ${ref.url || '(no URL)'} (${statusLabel})`);
+      });
+      if (a.designRefs.notes?.trim()) {
+        lines.push(`\n**Notes:** ${a.designRefs.notes}`);
+      }
+    } else {
+      lines.push("*No design references yet.*");
+    }
+    }
+
+    // Code References
+    if (isIncluded('codeRefs')) {
+    h("Code References");
+    const repos = a.codeRefs?.repos || [];
+    if (repos.length > 0) {
+      const byType = {};
+      repos.forEach(r => {
+        const t = r.type || 'other';
+        if (!byType[t]) byType[t] = [];
+        byType[t].push(r);
+      });
+      Object.entries(byType).forEach(([type, items]) => {
+        lines.push(`\n**${CODE_REF_TYPE_LABELS[type] || type}:**`);
+        items.forEach(r => {
+          const branch = r.branch ? ` (${r.branch})` : '';
+          lines.push(`- ${r.label || 'Untitled'}: ${r.url || '(no URL)'}${branch}`);
+          if (r.notes?.trim()) lines.push(`  ${r.notes}`);
+        });
+      });
+    } else {
+      lines.push("*No code references yet.*");
+    }
+    }
+
+    // Design System Reference
+    if (isIncluded('design')) {
+    h("Design System Reference");
+    if (a.design?.systemName || a.design?.figmaUrl) {
+      if (a.design.systemName) lines.push(`**Design System:** ${a.design.systemName}${a.design.version ? ` (${a.design.version})` : ""}`);
+      if (a.design.componentLibrary) lines.push(`**Component Library:** ${a.design.componentLibrary}`);
+      if (a.design.tokensLink) lines.push(`**Design Tokens:** ${a.design.tokensLink}`);
+      if (a.design.figmaUrl) {
+        lines.push(`**Figma File:** ${a.design.figmaUrl}`);
+        lines.push(`\n*Reference this Figma file for the canonical design system components, patterns, and tokens.*`);
+      }
+      if (a.design.mcpInstructions?.trim()) {
+        lines.push(`\n**Figma MCP Access:**`);
+        lines.push(a.design.mcpInstructions);
+        lines.push(`\n*AI agents with Figma MCP configured can access design system details programmatically for context-aware design suggestions.*`);
+      }
+    } else {
+      lines.push("*No design system reference configured.*");
+    }
+    }
 
     // Constraints & Edge Cases
+    if (isIncluded('edges')) {
     h("Technical Constraints & Edge Cases");
     f("Technical Constraints", a.scope?.technical);
     if (a.edges && Object.keys(a.edges).length > 0) {
-      lines.push(`\n**Edge Cases to Consider:**`);
-      EDGE_CASE_ITEMS.forEach((ec) => {
-        const d = a.edges[ec.id];
-        if (d?.considered) {
+      const consideredEdges = EDGE_CASE_ITEMS.filter(ec => a.edges[ec.id]?.considered);
+      if (consideredEdges.length > 0) {
+        lines.push(`\n**Edge Cases to Consider:**`);
+        consideredEdges.forEach((ec) => {
+          const d = a.edges[ec.id];
           lines.push(`- ✓ **${ec.label}**${d.notes ? `: ${d.notes}` : ""}`);
-        }
-      });
+        });
+      }
     }
-    if (a.assumptions && a.assumptions.length > 0) {
-      lines.push(`\n**Assumptions:**`);
-      a.assumptions.forEach((item) => {
-        lines.push(`- [${item.status}] ${item.text}`);
-      });
+    }
+    if (isIncluded('assumptions') && a.assumptions && a.assumptions.length > 0) {
+      const validAssumptions = a.assumptions.filter(item => item.text?.trim());
+      if (validAssumptions.length > 0) {
+        lines.push(`\n**Assumptions:**`);
+        validAssumptions.forEach((item) => {
+          lines.push(`- [${item.status}] ${item.text}`);
+        });
+      }
     }
 
     // Open Questions
+    if (isIncluded('questions')) {
     h("Open Questions & Decisions Needed");
     if (!a.questions || a.questions.length === 0) {
       lines.push("*No open questions at this time.*");
     } else {
-      const unanswered = a.questions.filter(q => q.status !== "Answered");
-      const answered = a.questions.filter(q => q.status === "Answered");
+      const validQuestions = a.questions.filter(q => q.text?.trim());
+      const unanswered = validQuestions.filter(q => q.status !== "Answered");
+      const answered = validQuestions.filter(q => q.status === "Answered");
       if (unanswered.length > 0) {
         lines.push(`\n**Pending (${unanswered.length}):**`);
         unanswered.forEach((q) => {
@@ -3676,13 +6077,14 @@ export default function RequirementAnalyzer() {
         });
       }
     }
+    }
 
     // Next Steps & Actions
     h("Next Steps & Actions");
     f("Design Lead Next Steps", a.summary?.nextSteps);
     f("Confidence Level", a.summary?.confidence);
     f("Key Concerns", a.summary?.concerns);
-    if (a.actions && a.actions.length > 0) {
+    if (isIncluded('actions') && a.actions && a.actions.length > 0) {
       lines.push(`\n**Action Items:**`);
       a.actions.forEach((item) => {
         lines.push(`- [${item.completed ? "X" : " "}] ${item.text}`);
@@ -3690,9 +6092,70 @@ export default function RequirementAnalyzer() {
     }
 
     // Additional Context
-    if (a.notes?.trim()) {
+    if (isIncluded('notes') && a.notes?.trim()) {
       h("Additional Context & Notes");
       lines.push(a.notes);
+    }
+
+    // User Research
+    if (isIncluded('research') && a.research?.rounds && a.research.rounds.length > 0) {
+      h("User Research");
+      a.research.rounds.forEach((round) => {
+        lines.push(`\n### ${round.name || 'Research Round'}`);
+        if (round.date) lines.push(`*Date: ${round.date}*`);
+        if (round.methodology) lines.push(`*Methodology: ${round.methodology}*`);
+        if (round.participants?.trim()) f("Participants", round.participants);
+        if (round.hypotheses?.trim()) {
+          lines.push(`\n**Hypotheses:**`);
+          lines.push(round.hypotheses);
+        }
+        if (round.scenarios && round.scenarios.length > 0) {
+          const validScenarios = round.scenarios.filter(s => s.task?.trim());
+          if (validScenarios.length > 0) {
+            lines.push(`\n**Test Scenarios:**`);
+            validScenarios.forEach((s, i) => {
+              const resultIcon = s.result === 'pass' ? '✓' : s.result === 'partial' ? '◐' : s.result === 'fail' ? '✗' : '○';
+              lines.push(`${i + 1}. ${resultIcon} ${s.task}`);
+              if (s.expectedOutcome?.trim()) lines.push(`   Expected: ${s.expectedOutcome}`);
+              if (s.notes?.trim()) lines.push(`   Notes: ${s.notes}`);
+            });
+          }
+        }
+        if (round.findings?.trim()) {
+          lines.push(`\n**Findings:**`);
+          lines.push(round.findings);
+        }
+        if (round.recommendations?.trim()) {
+          lines.push(`\n**Recommendations:**`);
+          lines.push(round.recommendations);
+        }
+      });
+    }
+
+    // Wireframes
+    if (isIncluded('wireframe') && a.wireframe?.iaSteps && a.wireframe.iaSteps.length > 0) {
+      h("Information Architecture");
+      const designSteps = a.wireframe.iaSteps.filter(s => s.designTask);
+      const nonDesignSteps = a.wireframe.iaSteps.filter(s => !s.designTask);
+      a.wireframe.iaSteps.forEach((step, i) => {
+        const tag = step.type === 'backend' ? ' `[Backend]`' : '';
+        const design = step.designTask ? ' 🎨' : '';
+        lines.push(`${i + 1}. **${step.name}**${tag}${design}${step.description ? ` — ${step.description}` : ''}`);
+      });
+      if (designSteps.length > 0) {
+        lines.push(`\n**Screens to design/prototype (${designSteps.length}):** ${designSteps.map(s => s.name).join(', ')}`);
+      }
+
+      const stepsWithWireframes = a.wireframe.iaSteps.filter(s => s.wireframe?.trim());
+      if (stepsWithWireframes.length > 0) {
+        h("Wireframes");
+        stepsWithWireframes.forEach((step) => {
+          lines.push(`\n### ${step.name}`);
+          lines.push('```');
+          lines.push(step.wireframe);
+          lines.push('```');
+        });
+      }
     }
 
     // Footer
@@ -3701,13 +6164,157 @@ export default function RequirementAnalyzer() {
     lines.push(`*Use this document to provide comprehensive context to AI design tools.*`);
 
     const mdContent = lines.join("\n");
-    const blob = new Blob([mdContent], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${a.name.replace(/[^a-z0-9]/gi, "_")}_AI_Brief.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const taskSlug = (a.name || 'untitled').replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40);
+
+    // Check if multi-file mode is active
+    const selectedIds = AI_BRIEF_SECTIONS.filter(s => inc[s.id]).map(s => s.id);
+    const activeGroups = BRIEF_FILE_GROUPS.filter(g => g.sections.some(s => selectedIds.includes(s)));
+    const multiFileMode = a.summary?.multiFileMode && activeGroups.length >= 2;
+
+    if (!multiFileMode) {
+      // Single file download
+      const blob = new Blob([mdContent], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${taskSlug}_AI_Brief.md`;
+      console.log('[GENERATE AI BRIEF] Triggering download:', link.download);
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // Multi-file: generate one brief per active group
+      const groupFiles = activeGroups.map(group => {
+        const groupSectionIds = group.sections.filter(s => selectedIds.includes(s));
+        const companionFiles = activeGroups.filter(g => g.id !== group.id).map(g => `${taskSlug}-${g.filename}.md`);
+
+        const gLines = [];
+        gLines.push(`# ${a.name || "Untitled Design Task"} — ${group.label}`);
+        gLines.push(`*Generated: ${new Date().toLocaleDateString()} | Target Phase: ${a.phase || "Not set"}*`);
+        if (a.jiraTicket) gLines.push(`*JIRA: ${a.jiraTicket}*`);
+        if (companionFiles.length > 0) {
+          gLines.push(`\n> **Companion files:** ${companionFiles.join(', ')}`);
+        }
+        if (a.summary?.aiTask?.trim() && group.id === 'core-brief') {
+          gLines.push(`\n## AI Task`);
+          gLines.push(a.summary.aiTask);
+        }
+
+        // Re-use the same generation logic but only for this group's sections
+        const gInc = (id) => groupSectionIds.includes(id);
+        const gh = (t, level = 2) => gLines.push(`\n${"#".repeat(level)} ${t}`);
+        const gf = (label, val) => { if (val?.trim()) gLines.push(`**${label}:** ${val}`); };
+
+        if (gInc('overview') || gInc('problem')) {
+          gh("Executive Summary");
+          if (gInc('overview')) gf("Feature", a.overview?.featureName);
+          if (gInc('problem')) {
+            gf("Problem Statement", a.problem?.problem);
+            gf("Business Outcome", a.problem?.outcome);
+            gf("Success Metrics", a.problem?.metrics);
+          }
+          if (gInc('overview') && a.overview?.description) gLines.push(`\n${a.overview.description}`);
+        }
+        if (gInc('context')) {
+          gh("User Context & Research");
+          gf("Target Users", a.problem?.who); gf("User Segments", a.context?.segments);
+          gf("Current Workflow", a.context?.workflow); gf("Workarounds in Use", a.context?.workarounds);
+          gf("Triggers/Entry Points", a.context?.triggers);
+          if (a.context?.beforeAfter) { gLines.push(`\n**Before/After Scenario:**`); gLines.push(a.context.beforeAfter); }
+        }
+        if (gInc('scope')) {
+          gh("Requirements & Scope");
+          gf("Affected Features", a.scope?.affected); gf("New Patterns Needed", a.scope?.newPatterns);
+          if (a.scope?.items?.length > 0) {
+            gLines.push(`\n**Scope Items by Version:**`);
+            const byV = {}; a.scope.items.forEach(i => { const v = i.version || "Unassigned"; if (!byV[v]) byV[v] = []; byV[v].push(i); });
+            Object.entries(byV).forEach(([v, items]) => { gLines.push(`\n*${v}:*`); items.forEach(i => { gLines.push(`- ${i.item}${i.priority ? ` [${i.priority}]` : ''}${i.description ? ` — ${i.description}` : ''}`); }); });
+          }
+        }
+        if (gInc('acceptance') && a.acceptanceCriteria?.length > 0) {
+          gh("Acceptance Criteria");
+          ["Must Have", "Should Have", "Nice to Have"].forEach(p => {
+            const items = a.acceptanceCriteria.filter(c => c.priority === p);
+            if (items.length > 0) { gLines.push(`\n**${p} (${items.length}):**`); items.forEach(c => { const s = c.status === "Done" ? "✓" : c.status === "In Progress" ? "→" : "○"; gLines.push(`- ${s} ${c.text}`); }); }
+          });
+        }
+        if (gInc('research') && a.research?.rounds?.length > 0) {
+          gh("User Research");
+          a.research.rounds.forEach(r => { gLines.push(`\n### ${r.name || 'Research Round'}`); if (r.findings?.trim()) { gLines.push(`**Findings:** ${r.findings}`); } if (r.recommendations?.trim()) { gLines.push(`**Recommendations:** ${r.recommendations}`); } });
+        }
+        if (gInc('assumptions') && a.assumptions?.length > 0) {
+          gh("Assumptions");
+          a.assumptions.filter(i => i.text?.trim()).forEach(i => gLines.push(`- [${i.status}] ${i.text}`));
+        }
+        if (gInc('questions') && a.questions?.length > 0) {
+          gh("Open Questions");
+          const pending = a.questions.filter(q => q.text?.trim() && q.status !== "Answered");
+          const answered = a.questions.filter(q => q.text?.trim() && q.status === "Answered");
+          if (pending.length > 0) { gLines.push(`\n**Pending (${pending.length}):**`); pending.forEach(q => gLines.push(`- (${q.type}) ${q.text}`)); }
+          if (answered.length > 0) { gLines.push(`\n**Resolved (${answered.length}):**`); answered.forEach(q => { gLines.push(`- (${q.type}) ${q.text}`); if (q.answer?.trim()) gLines.push(`  → ${q.answer}`); }); }
+        }
+        if (gInc('edges')) {
+          gh("Edge Cases");
+          gf("Technical Constraints", a.scope?.technical);
+          const considered = EDGE_CASE_ITEMS.filter(ec => a.edges?.[ec.id]?.considered);
+          if (considered.length > 0) { considered.forEach(ec => { const d = a.edges[ec.id]; gLines.push(`- ✓ **${ec.label}**${d.notes ? `: ${d.notes}` : ''}`); }); }
+        }
+        if (gInc('designRefs')) {
+          gh("Design References");
+          const refs = a.designRefs?.references || [];
+          if (refs.length > 0) { refs.forEach(ref => { gLines.push(`- **${ref.label || 'Untitled'}** [${DESIGN_REF_TYPE_LABELS[ref.type] || ref.type}] — ${ref.url || '(no URL)'} (${ref.status === 'final' ? '✓ Final' : '⟳ WIP'})`); }); if (a.designRefs.notes?.trim()) gLines.push(`\n**Notes:** ${a.designRefs.notes}`); }
+        }
+        if (gInc('codeRefs')) {
+          gh("Code References");
+          const repos = a.codeRefs?.repos || [];
+          if (repos.length > 0) { const byType = {}; repos.forEach(r => { const t = r.type || 'other'; if (!byType[t]) byType[t] = []; byType[t].push(r); }); Object.entries(byType).forEach(([type, items]) => { gLines.push(`\n**${CODE_REF_TYPE_LABELS[type] || type}:**`); items.forEach(r => { gLines.push(`- ${r.label || 'Untitled'}: ${r.url || '(no URL)'}${r.branch ? ` (${r.branch})` : ''}`); if (r.notes?.trim()) gLines.push(`  ${r.notes}`); }); }); }
+        }
+        if (gInc('mapping') && a.mapping?.figmaUrl) {
+          gh("Visual References (Legacy)");
+          gLines.push(`Figma: ${a.mapping.figmaUrl}`);
+        }
+        if (gInc('design')) {
+          gh("Design System Reference");
+          if (a.design?.systemName) gLines.push(`**Design System:** ${a.design.systemName}${a.design.version ? ` (${a.design.version})` : ''}`);
+          if (a.design?.componentLibrary) gLines.push(`**Component Library:** ${a.design.componentLibrary}`);
+          if (a.design?.figmaUrl) gLines.push(`**Figma File:** ${a.design.figmaUrl}`);
+          if (a.design?.mcpInstructions?.trim()) { gLines.push(`\n**Figma MCP Access:**`); gLines.push(a.design.mcpInstructions); }
+        }
+        if (gInc('wireframe') && a.wireframe?.iaSteps?.length > 0) {
+          gh("Information Architecture");
+          a.wireframe.iaSteps.forEach((step, i) => { gLines.push(`${i + 1}. **${step.name}**${step.type === 'backend' ? ' [Backend]' : ''}${step.description ? ` — ${step.description}` : ''}`); });
+          const withWf = a.wireframe.iaSteps.filter(s => s.wireframe?.trim());
+          if (withWf.length > 0) { gh("Wireframes"); withWf.forEach(s => { gLines.push(`\n### ${s.name}`); gLines.push('```'); gLines.push(s.wireframe); gLines.push('```'); }); }
+        }
+        if (gInc('actions') && a.actions?.length > 0) {
+          gh("Action Items");
+          a.actions.forEach(i => gLines.push(`- [${i.completed ? "X" : " "}] ${i.text}`));
+        }
+        if (gInc('notes') && a.notes?.trim()) {
+          gh("Additional Notes");
+          gLines.push(a.notes);
+        }
+
+        gLines.push(`\n---`);
+        gLines.push(`*Auto-generated from Requirements Analyzer — ${group.label}*`);
+
+        return { filename: `${taskSlug}-${group.filename}.md`, content: gLines.join("\n") };
+      });
+
+      // Download each file sequentially with small delay
+      groupFiles.forEach((file, i) => {
+        setTimeout(() => {
+          const blob = new Blob([file.content], { type: "text/markdown" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = file.filename;
+          link.click();
+          URL.revokeObjectURL(url);
+        }, i * 300);
+      });
+      console.log(`[GENERATE AI BRIEF] Multi-file download: ${groupFiles.length} files`);
+    }
+    console.log('[GENERATE AI BRIEF] Download complete');
   };
 
   const handleImportMd = (event) => {
@@ -3862,16 +6469,27 @@ export default function RequirementAnalyzer() {
         const applyField = (fieldName, value, currentValue) => {
           if (!value) return currentValue;
           
+          // Ensure values are strings
+          const safeValue = typeof value === 'string' ? value : 
+                           Array.isArray(value) ? value.join('\n') : 
+                           typeof value === 'object' ? JSON.stringify(value, null, 2) : 
+                           String(value);
+          const safeCurrentValue = typeof currentValue === 'string' ? currentValue : String(currentValue || '');
+          
           const mergeMode = pasteMergeModes[fieldName] || 'replace';
-          if (!currentValue || (typeof currentValue === 'string' && currentValue.trim() === '')) {
-            return value;
+          if (!safeCurrentValue || safeCurrentValue.trim() === '') {
+            return safeValue;
           }
           
           if (mergeMode === 'add') {
-            return `${currentValue}\n\n${value}`;
+            return `${safeCurrentValue}\n\n${safeValue}`;
           }
           
-          return value; // replace mode
+          if (mergeMode === 'skip') {
+            return safeCurrentValue; // keep existing, ignore new
+          }
+          
+          return safeValue; // replace mode
         };
         
         // Update overview fields
@@ -4144,33 +6762,53 @@ export default function RequirementAnalyzer() {
   const getActiveFieldValue = (section) => {
     if (!active) return '';
     
+    // Helper to safely convert to string
+    const toSafeString = (val) => {
+      if (val == null) return '';
+      if (typeof val === 'string') return val;
+      if (Array.isArray(val)) return val.join('\n');
+      if (typeof val === 'object') return JSON.stringify(val, null, 2);
+      return String(val);
+    };
+    
     // Direct fields
     if (active[section]) {
-      return typeof active[section] === 'string' ? active[section] : '';
+      return toSafeString(active[section]);
     }
     
     // Nested fields
-    if (section === 'description') return active.overview?.description || '';
-    if (section === 'featureName') return active.overview?.featureName || '';
-    if (section === 'problem') return active.problem?.problem || '';
-    if (section === 'who') return active.problem?.who || '';
-    if (section === 'outcome') return active.problem?.outcome || '';
-    if (section === 'segments') return active.context?.segments || '';
-    if (section === 'workflow') return active.context?.workflow || '';
+    if (section === 'description') return toSafeString(active.overview?.description);
+    if (section === 'featureName') return toSafeString(active.overview?.featureName);
+    if (section === 'problem') return toSafeString(active.problem?.problem);
+    if (section === 'who') return toSafeString(active.problem?.who);
+    if (section === 'outcome') return toSafeString(active.problem?.outcome);
+    if (section === 'segments') return toSafeString(active.context?.segments);
+    if (section === 'workflow') return toSafeString(active.context?.workflow);
     
     return '';
   };
 
   const handleApplyAudioChanges = () => {
     Object.entries(aiSuggestions).forEach(([section, content]) => {
-      if (selectedSections[section] !== false && content.trim()) {
+      // Ensure content is a string
+      const safeContent = typeof content === 'string' ? content : 
+                         Array.isArray(content) ? content.join('\n') : 
+                         typeof content === 'object' ? JSON.stringify(content, null, 2) : 
+                         String(content || '');
+      
+      if (selectedSections[section] !== false && safeContent.trim()) {
         const existingContent = getActiveFieldValue(section);
         const mergeMode = mergeModes[section] || 'replace';
         
-        let finalContent = content;
-        if (existingContent && existingContent.trim() && mergeMode === 'add') {
-          // Add new content to existing
-          finalContent = `${existingContent}\n\n${content}`;
+        let finalContent = safeContent;
+        if (existingContent && existingContent.trim()) {
+          if (mergeMode === 'add') {
+            // Add new content to existing
+            finalContent = `${existingContent}\n\n${safeContent}`;
+          } else if (mergeMode === 'skip') {
+            // Keep existing, ignore new
+            finalContent = existingContent;
+          }
         }
         
         updateActive(section, finalContent);
@@ -4212,8 +6850,187 @@ export default function RequirementAnalyzer() {
     return counts;
   }, [analyses]);
 
+  // --- TaskChat Component ---
+  const TaskChat = ({ language }) => {
+    const t = (TRANSLATIONS[language] || TRANSLATIONS.en).chat;
+    const [inputValue, setInputValue] = useState("");
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, chatLoading]);
+
+    const handleSend = () => {
+      const msg = inputValue.trim();
+      if (!msg || chatLoading) return;
+      setInputValue("");
+      sendChatMessage(msg);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    };
+
+    if (!githubAIKey) {
+      return (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">{t.noKey}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {chatMessages.length === 0 && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 text-center mt-8 leading-relaxed">
+              {t.placeholder}
+            </div>
+          )}
+          {chatMessages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-slate-800 dark:bg-slate-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+              }`}>
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {/* Proposal cards */}
+                {msg.proposals && msg.proposals.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {msg.proposals.map((proposal, idx) => (
+                      <div key={idx} className={`rounded-md border p-2 ${
+                        proposal.applied
+                          ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30'
+                          : 'border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30'
+                      }`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{t.proposalLabel}</div>
+                            <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <span className="text-slate-400 dark:text-slate-500">{proposal.section}.</span>{proposal.field === '_add' ? '(add)' : proposal.field}
+                            </div>
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 rounded p-1.5 border border-slate-200 dark:border-slate-600 whitespace-pre-wrap break-words">
+                              {typeof proposal.value === 'string' ? proposal.value : JSON.stringify(proposal.value, null, 2)}
+                            </div>
+                            {proposal.reason && (
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 italic">{proposal.reason}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 mt-2">
+                          {proposal.applied ? (
+                            <span className="text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                              {t.applied}
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleApplyProposal(msg.id, idx)}
+                                className="px-2 py-0.5 text-[10px] font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                              >
+                                {t.accept}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setChatMessages(prev => prev.map(m => {
+                                    if (m.id !== msg.id || !m.proposals) return m;
+                                    const newProposals = m.proposals.filter((_, i) => i !== idx);
+                                    return { ...m, proposals: newProposals.length > 0 ? newProposals : null };
+                                  }));
+                                }}
+                                className="px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                              >
+                                {t.reject}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {chatLoading && (
+            <div className="flex justify-start">
+              <div className="bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className="inline-flex gap-1">
+                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
+                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>·</span>
+                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>·</span>
+                </span>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="px-3 py-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex gap-2">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                // Auto-resize
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={t.placeholder}
+              rows={2}
+              className="flex-1 resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              style={{ maxHeight: '120px' }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!inputValue.trim() || chatLoading}
+              className="px-3 py-2 bg-slate-800 dark:bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 dark:hover:bg-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+              title={t.send}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l-7 7m7-7l7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSection = () => {
     const lang = active.language || "en";
+    
+    // Discovery mode sections
+    if (appMode === "discovery") {
+      switch (activeSection) {
+        case "discoveryTable":
+          return <DiscoveryTableSection 
+            data={active.discoveryTable} 
+            onChange={(v) => updateActive("discoveryTable", v)} 
+          />;
+        case "opportunityTree":
+          return <OpportunitySolutionTreeSection 
+            data={active.opportunityTree} 
+            onChange={(v) => updateActive("opportunityTree", v)} 
+          />;
+        default:
+          return <DiscoveryTableSection 
+            data={active.discoveryTable} 
+            onChange={(v) => updateActive("discoveryTable", v)} 
+          />;
+      }
+    }
+    
+    // Design Specs mode sections
     switch (activeSection) {
       case "overview": return <OverviewSection 
         data={active.overview} 
@@ -4248,305 +7065,340 @@ export default function RequirementAnalyzer() {
       case "acceptance": return <AcceptanceCriteriaSection data={active.acceptanceCriteria || []} language={lang} onChange={(v) => updateActive("acceptanceCriteria", v)} />;
       case "questions": return <QuestionsSection data={active.questions} language={lang} onChange={(v) => updateActive("questions", v)} />;
       case "notes": return <NotesSection data={active.notes} language={lang} onChange={(v) => updateActive("notes", v)} />;
-      case "mapping": return <MappingSection data={active.mapping || { figmaUrl: "" }} language={lang} onChange={(v) => updateActive("mapping", v)} />;
-      case "summary": return <SummarySection data={active.summary} language={lang} onChange={(v) => updateActive("summary", v)} onGenerateAIBrief={() => handleGenerateAIBrief()} />;
+      case "research": return <UserResearchSection data={active.research || { rounds: [] }} language={lang} onChange={(v) => updateActive("research", v)} />;
+      case "designRefs": return <DesignReferencesSection data={active.designRefs || { references: [], notes: "" }} language={lang} onChange={(v) => updateActive("designRefs", v)} />;
+      case "codeRefs": return <CodeReferencesSection data={active.codeRefs || { repos: [] }} language={lang} onChange={(v) => updateActive("codeRefs", v)} />;
+      case "design": return <DesignSystemSection data={active.design || {}} language={lang} onChange={(v) => updateActive("design", v)} />;
+      case "wireframe": return <WireframeSection data={active.wireframe || { iaSteps: [] }} analysis={active} language={lang} githubAIKey={githubAIKey} onChange={(v) => updateActive("wireframe", v)} />;
+      case "summary": return <SummarySection data={active.summary} language={lang} analysis={active} onChange={(v) => updateActive("summary", v)} onGenerateAIBrief={() => handleGenerateAIBrief()} />;
       default: return null;
     }
   };
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      {/* Main Content Area */}
-      <div className="flex flex-1 min-h-0">
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
-          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Design task manager</h1>
-              <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close sidebar">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
+      {/* Top bar - spans full width */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3">
+        <div className="flex gap-4">
+          {/* Left: Mode Switcher + Sections */}
+          <div className="flex flex-col gap-3 flex-shrink-0">
+            {/* Mode Switcher */}
+            <ModeSwitch 
+              mode={appMode} 
+              onChange={(newMode) => {
+                setAppMode(newMode);
+                setActiveSection(newMode === "discovery" ? "discoveryTable" : "overview");
+              }} 
+            />
+            
+            {/* Section nav */}
+            <div className="flex gap-1 flex-wrap">
+              {(appMode === "discovery" ? DISCOVERY_SECTIONS : DESIGN_SECTIONS).map((s) => {
+                const lang = active.language || "en";
+                const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+                const getCountText = () => {
+                    if (s.id === "assumptions") {
+                      const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
+                      return `${open}`;
+                    }
+                    if (s.id === "questions") {
+                      const open = active.questions.filter(q => q.status === "Open").length;
+                      return `${open}`;
+                    }
+                    return undefined;
+                  };
+                  return (
+                    <Pill
+                      key={s.id}
+                      active={activeSection === s.id}
+                      onClick={() => setActiveSection(s.id)}
+                      completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
+                      count={getCountText()}
+                    >
+                      <span className="mr-1 opacity-60">{s.icon}</span>
+                      {t.sections[s.id] || s.label}
+                    </Pill>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Right: Task info and controls */}
+            <div className="flex-1 flex flex-col gap-2 min-w-0">
+              <div className="flex items-center gap-3">
+                {!sidebarOpen && appMode !== "discovery" && (
+                  <button onClick={() => setSidebarOpen(true)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Show sidebar">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+                <input
+                  className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 flex-1 px-0"
+                  value={active.name} onChange={(e) => updateName(e.target.value)}
+                  placeholder={appMode === "discovery" ? "Discovery name..." : "Analysis name..."}
+                />
+                <div className="flex items-center gap-2 shrink-0">
+                  {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
+                  {appMode !== "discovery" && (
+                    <>
+                      <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
+                          style={{ width: `${completion}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                    title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                  >
+                    {darkMode ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      actionsPanelOpen 
+                        ? "text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200" 
+                        : "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500"
+                    }`}
+                    title={actionsPanelOpen ? "Close actions panel" : "Open actions panel"}
+                  >
+                    {actionsPanelOpen ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        <span>Open Actions</span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Phase filter */}
-          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-            <div className="flex gap-1 flex-wrap">
-              {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
-                const count = phaseCounts[f] || 0;
-                if (f !== "All" && count === 0) return null;
-                const isActive = phaseFilter === f;
-                const colors = VERSION_COLORS[f];
+      {/* Below header: Sidebar + Content + Right Panel */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar toggle when closed */}
+        {!sidebarOpen && appMode !== "discovery" && (
+          <button 
+            onClick={() => setSidebarOpen(true)} 
+            className="w-10 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col items-center pt-4 shrink-0 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            title="Show feature list"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+        {/* Sidebar - Hide in Discovery mode */}
+        {sidebarOpen && appMode !== "discovery" && (
+          <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
+            <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Feature list</h1>
+                </div>
+                <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close sidebar">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Phase filter */}
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex gap-1 flex-wrap">
+                {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
+                  const count = phaseCounts[f] || 0;
+                  if (f !== "All" && count === 0) return null;
+                  const isActive = phaseFilter === f;
+                  const colors = VERSION_COLORS[f];
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setPhaseFilter(f)}
+                      className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                        isActive
+                          ? colors
+                            ? `${colors.bg} ${colors.text} font-medium`
+                            : "bg-slate-800 text-white font-medium"
+                          : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                      }`}
+                    >
+                      {f} {count > 0 && <span className="opacity-60">{count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-2">
+              {filteredAnalyses.map((a) => {
+                const comp = getCompletion(a);
                 return (
-                  <button
-                    key={f}
-                    onClick={() => setPhaseFilter(f)}
-                    className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                      isActive
-                        ? colors
-                          ? `${colors.bg} ${colors.text} font-medium`
-                          : "bg-slate-800 text-white font-medium"
-                        : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                  <div
+                    key={a.id}
+                    onClick={() => { setActiveId(a.id); setActiveSection("overview"); }}
+                    className={`mx-2 mb-1 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors ${
+                      a.id === activeId ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                     }`}
                   >
-                    {f} {count > 0 && <span className="opacity-60">{count}</span>}
-                  </button>
+                    {a.jiraTicket && (
+                      <div className="text-[10px] font-semibold tracking-wider text-slate-600 dark:text-slate-400 uppercase mb-1">
+                        {a.jiraTicket}
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words">{a.name || "Untitled Design Task"}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {a.secureMode && (
+                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700" title="Secure mode enabled">
+                            <svg className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                          </div>
+                        )}
+                        {a.phase && <VersionBadge version={a.phase} size="xs" />}
+                        {analyses.length > 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 opacity-0 group-hover:opacity-100 text-sm ml-1"
+                          >×</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
+              {filteredAnalyses.length === 0 && (
+                <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                  No analyses in this phase.
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto py-2">
-            {filteredAnalyses.map((a) => {
-              const comp = getCompletion(a);
-              return (
-                <div
-                  key={a.id}
-                  onClick={() => { setActiveId(a.id); setActiveSection("overview"); }}
-                  className={`mx-2 mb-1 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors ${
-                    a.id === activeId ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                  }`}
-                >
-                  {a.jiraTicket && (
-                    <div className="text-[10px] font-semibold tracking-wider text-slate-600 dark:text-slate-400 uppercase mb-1">
-                      {a.jiraTicket}
+            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
+              {/* New Design Task Button */}
+              <button
+                onClick={createNew}
+                className="w-full py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors font-medium"
+              >
+                + New design task
+              </button>
+              
+              {/* Export Options Section */}
+              {syncOptionsExpanded && (
+                <div className="space-y-2 mb-2">
+                  {!active?.secureMode && gistExpanded && (
+                    <div className="space-y-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                      <div>
+                        <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">GitHub Token</label>
+                        <input
+                          type="password"
+                          placeholder="ghp_..."
+                          value={githubToken}
+                          onChange={(e) => setGithubToken(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                        />
+                        <a
+                          href="https://github.com/settings/tokens/new?description=Requirement%20Analyzer&scopes=gist"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline mt-1 inline-block"
+                        >
+                          Create token
+                        </a>
+                      </div>
+                      <button
+                        onClick={handleSaveToGist}
+                        disabled={gistLoading || !githubToken}
+                        className="w-full py-2.5 text-sm text-white bg-slate-800 dark:bg-slate-600 hover:bg-slate-700 dark:hover:bg-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      >
+                        {gistLoading ? "Saving..." : active?.gistId ? "Update Gist" : "Save to Gist"}
+                      </button>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Gist ID"
+                          value={loadGistId}
+                          onChange={(e) => setLoadGistId(e.target.value)}
+                          className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                        />
+                        <button
+                          onClick={handleLoadFromGist}
+                          disabled={gistLoading || !loadGistId.trim()}
+                          className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded hover:border-slate-400 dark:hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          Load
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <div className="flex items-start justify-between gap-1">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words">{a.name || "Untitled Design Task"}</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {a.secureMode && (
-                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700" title="Secure mode enabled">
-                          <svg className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                        </div>
-                      )}
-                      {a.phase && <VersionBadge version={a.phase} size="xs" />}
-                      {analyses.length > 1 && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
-                          className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 opacity-0 group-hover:opacity-100 text-sm ml-1"
-                        >×</button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {filteredAnalyses.length === 0 && (
-              <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                No analyses in this phase.
-              </div>
-            )}
-          </div>
-          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
-            {/* New Design Task Button */}
-            <button
-              onClick={createNew}
-              className="w-full py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors font-medium"
-            >
-              + New design task
-            </button>
-            
-            {/* Export Options Section */}
-            {syncOptionsExpanded && (
-              <div className="space-y-2 mb-2">
-                {/* GitHub Gist Sync - Only when current analysis doesn't have secure mode */}
-                {!active?.secureMode && gistExpanded && (
-                  <div className="space-y-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                    {/* GitHub Token */}
-                    <div>
-                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">GitHub Token</label>
-                      <input
-                        type="password"
-                        placeholder="ghp_..."
-                        value={githubToken}
-                        onChange={(e) => setGithubToken(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-                      />
-                      <a
-                        href="https://github.com/settings/tokens/new?description=Requirement%20Analyzer&scopes=gist"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline mt-1 inline-block"
-                      >
-                        Create token
-                      </a>
-                    </div>
-                    
-                    {/* Save to Gist */}
+                  {!active?.secureMode && (
                     <button
-                      onClick={handleSaveToGist}
-                      disabled={gistLoading || !githubToken}
-                      className="w-full py-2.5 text-sm text-white bg-slate-800 dark:bg-slate-600 hover:bg-slate-700 dark:hover:bg-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      onClick={() => setGistExpanded(!gistExpanded)}
+                      className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
+                      title="Cloud backup: Saves your active task to GitHub as a private gist. Share the Gist ID with others to let them import a copy."
                     >
-                      {gistLoading ? "Saving..." : active?.gistId ? "Update Gist" : "Save to Gist"}
+                      GitHub Sync {gistExpanded ? "⌄" : "⌃"}
                     </button>
-                    
-                    {/* Load from Gist */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Gist ID"
-                        value={loadGistId}
-                        onChange={(e) => setLoadGistId(e.target.value)}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-                      />
-                      <button
-                        onClick={handleLoadFromGist}
-                        disabled={gistLoading || !loadGistId.trim()}
-                        className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded hover:border-slate-400 dark:hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                      >
-                        Load
-                      </button>
-                    </div>
-                  </div>
-                )}
-                
-                {!active?.secureMode && (
+                  )}
                   <button
-                    onClick={() => setGistExpanded(!gistExpanded)}
-                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
-                    title="Cloud backup: Saves your active task to GitHub as a private gist. Share the Gist ID with others to let them import a copy. Changes don't auto-sync between people - each save/load creates an independent snapshot."
+                    onClick={handleExportJson}
+                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
                   >
-                    GitHub Sync {gistExpanded ? "⌄" : "⌃"}
+                    Share active task
                   </button>
-                )}
-                
-                {/* Share Link */}
-                <button
-                  onClick={handleExportJson}
-                  className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                >
-                  Share active task
-                </button>
-                
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImportMd}
-                  accept=".md,.markdown,.txt"
-                  className="hidden"
-                />
-                <button 
-                  onClick={() => fileInputRef.current?.click()} 
-                  className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                >
-                  Import Markdown
-                </button>
-                <button onClick={handleExportMd} className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors">
-                  Export as Markdown
-                </button>
-              </div>
-            )}
-            
-            {/* Export Options Toggle Button */}
-            <button
-              onClick={() => setSyncOptionsExpanded(!syncOptionsExpanded)}
-              className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
-            >
-              Export options {syncOptionsExpanded ? "⌄" : "⌃"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3">
-          <div className="flex items-center gap-3 mb-3">
-            {!sidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 mr-1" title="Show sidebar">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-            <input
-              className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 flex-1 px-0"
-              value={active.name} onChange={(e) => updateName(e.target.value)}
-              placeholder="Analysis name..."
-            />
-            <div className="flex items-center gap-2 shrink-0">
-              {active.phase && <VersionBadge version={active.phase} />}
-              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
-                  style={{ width: `${completion}%` }}
-                />
-              </div>
-              <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImportMd}
+                    accept=".md,.markdown,.txt"
+                    className="hidden"
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                  >
+                    Import Markdown
+                  </button>
+                  <button onClick={handleExportMd} className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors">
+                    Export as Markdown
+                  </button>
+                </div>
+              )}
               <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                onClick={() => setSyncOptionsExpanded(!syncOptionsExpanded)}
+                className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
               >
-                {darkMode ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-              <button
-                onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
-                className="text-slate-400 hover:text-slate-800 ml-2 transition-colors flex items-center gap-1.5"
-                title="Toggle actions panel"
-              >
-                {actionsPanelOpen ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                ) : (
-                  <>
-                    <span className="text-sm">Actions</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </>
-                )}
+                Export options {syncOptionsExpanded ? "⌄" : "⌃"}
               </button>
             </div>
           </div>
-          {/* Section nav */}
-          <div className="flex gap-1 overflow-x-auto pb-4 -mx-1 px-1">
-            {SECTIONS.map((s) => {
-              const lang = active.language || "en";
-              const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-              const getCountText = () => {
-                if (s.id === "assumptions") {
-                  const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
-                  return `${open}`;
-                }
-                if (s.id === "questions") {
-                  const open = active.questions.filter(q => q.status === "Open").length;
-                  return `${open}`;
-                }
-                return undefined;
-              };
-              return (
-                <Pill
-                  key={s.id}
-                  active={activeSection === s.id}
-                  onClick={() => setActiveSection(s.id)}
-                  completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
-                  count={getCountText()}
-                >
-                  <span className="mr-1 opacity-60">{s.icon}</span>
-                  {t.sections[s.id] || s.label}
-                </Pill>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
@@ -4554,26 +7406,56 @@ export default function RequirementAnalyzer() {
             {renderSection()}
           </div>
         </div>
-      </div>
 
-      {/* Actions Panel */}
+      {/* Right Panel — Actions / AI Chat tabs */}
       {actionsPanelOpen && (
         <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
-          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Action Items</h2>
-              <button onClick={() => setActionsPanelOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close actions panel">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setRightPanelTab("actions")}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    rightPanelTab === "actions"
+                      ? "bg-slate-800 dark:bg-slate-600 text-white"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {(TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.actions}
+                </button>
+                {!active?.secureMode && (
+                  <button
+                    onClick={() => setRightPanelTab("chat")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                      rightPanelTab === "chat"
+                        ? "bg-slate-800 dark:bg-slate-600 text-white"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {(TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.title}
+                  </button>
+                )}
+              </div>
+              <button onClick={() => setActionsPanelOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close panel">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            <ActionsSection data={active.actions || []} onChange={(v) => updateActive("actions", v)} />
-          </div>
+          {rightPanelTab === "actions" ? (
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <ActionsSection data={active.actions || []} onChange={(v) => updateActive("actions", v)} />
+            </div>
+          ) : (
+            <TaskChat language={active?.language || "en"} />
+          )}
         </div>
       )}
+      </div>
 
       {/* Audio Analysis Modal - Only when current analysis doesn't have secure mode */}
       {!active?.secureMode && (
@@ -4648,7 +7530,7 @@ export default function RequirementAnalyzer() {
 
       {/* Markdown Export Modal */}
       {showExport && active && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8" onClick={() => setShowExport(false)}>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-8" onClick={() => setShowExport(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="font-semibold text-slate-800 dark:text-slate-200">Markdown Export</h3>
@@ -4674,7 +7556,6 @@ export default function RequirementAnalyzer() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
