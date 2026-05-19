@@ -5026,11 +5026,7 @@ const DiscoveryTableSection = ({ data, onChange }) => {
   return (
     <div>
       <SectionHeader title="Discovery Research" description="Track opportunities, priorities, objectives, and evidence for informed decision-making." />
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-2">
-          <button onClick={addRow} className="px-3 py-2 text-sm bg-slate-800 dark:bg-slate-600 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors font-medium">+ Add Row</button>
-          <button onClick={addColumn} className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium">+ Add Column</button>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <button onClick={() => setColumnOrganizer(!columnOrganizer)} className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
           Organize Columns
@@ -6746,10 +6742,20 @@ Be concise and actionable. Respond in the same language the user writes in.`;
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       {/* Top bar - spans full width */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3">
-        <div className="flex gap-4">
-          {/* Left: Mode Switcher + Sections */}
-          <div className="flex flex-col gap-3 flex-shrink-0">
-            {/* Mode Switcher */}
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Sidebar toggle + Name + Mode Switcher + controls */}
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className={`p-1.5 rounded-md transition-colors ${sidebarOpen ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`} title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+                <rect x="14" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+              </svg>
+            </button>
+            <input
+              className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 min-w-0 max-w-xs px-0"
+              value={active.name} onChange={(e) => updateName(e.target.value)}
+              placeholder={appMode === "discovery" ? "Discovery name..." : "Analysis name..."}
+            />
             <ModeSwitch 
               mode={appMode} 
               onChange={(newMode) => {
@@ -6758,56 +6764,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 setActiveSection(newMode === "discovery" ? "discoveryTable" : "overview");
               }} 
             />
-            
-            {/* Section nav */}
-            <div className="flex gap-1 flex-wrap">
-              {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
-                const lang = active.language || "en";
-                const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-                const getCountText = () => {
-                  if (s.id === "assumptions") {
-                    const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
-                    return `${open}`;
-                  }
-                  if (s.id === "questions") {
-                    const open = active.questions.filter(q => q.status === "Open").length;
-                    return `${open}`;
-                  }
-                  return undefined;
-                };
-                return (
-                  <Pill
-                    key={s.id}
-                    active={activeSection === s.id}
-                    onClick={() => setActiveSection(s.id)}
-                    completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
-                    count={getCountText()}
-                  >
-                    <span className="mr-1 opacity-60">{s.icon}</span>
-                    {t.sections[s.id] || s.label}
-                  </Pill>
-                );
-              })}
-            </div>
-          </div>
-          
-          {/* Right: Task info and controls */}
-          <div className="flex-1 flex flex-col gap-2 min-w-0">
-            <div className="flex items-center gap-3">
-              {!sidebarOpen && appMode !== "discovery" && (
-                <button onClick={() => setSidebarOpen(true)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Show sidebar">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-              <input
-                className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 flex-1 px-0"
-                value={active.name} onChange={(e) => updateName(e.target.value)}
-                placeholder={appMode === "discovery" ? "Discovery name..." : "Analysis name..."}
-              />
-              <div className="flex items-center gap-2 shrink-0">
-                {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
                 {appMode !== "discovery" && (
                   <>
                     <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -6859,28 +6817,50 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     </>
                   )}
                 </button>
-              </div>
             </div>
+          </div>
+          {/* Row 2: Section nav pills */}
+          <div className="flex gap-1 flex-wrap">
+            {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
+              const lang = active.language || "en";
+              const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+              const getCountText = () => {
+                if (s.id === "assumptions") {
+                  const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
+                  return `${open}`;
+                }
+                if (s.id === "questions") {
+                  const open = active.questions.filter(q => q.status === "Open").length;
+                  return `${open}`;
+                }
+                return undefined;
+              };
+              return (
+                <Pill
+                  key={s.id}
+                  active={activeSection === s.id}
+                  onClick={() => setActiveSection(s.id)}
+                  completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
+                  count={getCountText()}
+                >
+                  <span className="mr-1 opacity-60">{s.icon}</span>
+                  {t.sections[s.id] || s.label}
+                </Pill>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Below header: Sidebar + Content + Right Panel */}
       <div className="flex flex-1 min-h-0">
-      {/* Sidebar - Hide in Discovery mode */}
-      {sidebarOpen && appMode !== "discovery" && (
+      {/* Sidebar */}
+      {sidebarOpen && (
         <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
           <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Design task manager</h1>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Structured documentation & AI brief generation</p>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close sidebar">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
+            <div>
+              <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Design task manager</h1>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Structured documentation & AI brief generation</p>
             </div>
           </div>
 
