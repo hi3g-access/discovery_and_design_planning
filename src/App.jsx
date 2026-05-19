@@ -22,6 +22,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import OSTCanvas from "./OSTCanvas.jsx";
 
 // --- Encryption Utilities for Secure localStorage ---
 // Uses Web Crypto API to encrypt sensitive data at rest
@@ -370,7 +371,7 @@ const TRANSLATIONS = {
   }
 };
 
-const DESIGN_SECTIONS = [
+const SECTIONS = [
   { id: "overview", label: "Overview", icon: "◉" },
   { id: "problem", label: "Problem & Purpose", icon: "◎" },
   { id: "context", label: "User Context", icon: "◈" },
@@ -390,11 +391,8 @@ const DESIGN_SECTIONS = [
 
 const DISCOVERY_SECTIONS = [
   { id: "discoveryTable", label: "Discovery Research", icon: "◫" },
-  { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◈" },
+  { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◆" },
 ];
-
-// For backwards compatibility
-const SECTIONS = DESIGN_SECTIONS;
 
 const ORIGIN_OPTIONS = [
   "User Research", "Business Metric", "Competitor Analysis",
@@ -4926,146 +4924,118 @@ const ModeSwitch = ({ mode, onChange }) => {
   );
 };
 
-// --- Discovery Table Section ---
+// --- Discovery Research Table ---
 const DiscoveryTableSection = ({ data, onChange }) => {
   const [draggedRowIndex, setDraggedRowIndex] = useState(null);
   const [columnOrganizer, setColumnOrganizer] = useState(false);
-  
-  // Initialize data structure if empty
-  const tableData = data || {
-    columns: [
-      { id: generateId(), name: "Opportunity", visible: true },
-      { id: generateId(), name: "Priority (Now, Next, Later)", visible: true },
-      { id: generateId(), name: "Objectives", visible: true },
-      { id: generateId(), name: "Analysis", visible: true },
-      { id: generateId(), name: "Evidence", visible: true },
-      { id: generateId(), name: "Going forward", visible: true },
-      { id: generateId(), name: "Solutions", visible: true },
-      { id: generateId(), name: "Experiment", visible: true },
-    ],
-    rows: []
-  };
-  
-  const updateData = (updates) => {
-    onChange({ ...tableData, ...updates });
-  };
-  
-  const addRow = () => {
-    const newRow = {
-      id: generateId(),
-      cells: tableData.columns.reduce((acc, col) => ({ ...acc, [col.id]: "" }), {})
+  const [columnWidths, setColumnWidths] = useState({});
+  const resizingRef = useRef(null);
+  const tableRef = useRef(null);
+
+  const handleResizeStart = (e, colId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const th = e.target.closest('th');
+    const startWidth = th.offsetWidth;
+    resizingRef.current = { colId, startX, startWidth };
+    const handleMouseMove = (moveEvent) => {
+      if (!resizingRef.current) return;
+      const diff = moveEvent.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(60, resizingRef.current.startWidth + diff);
+      setColumnWidths(prev => ({ ...prev, [resizingRef.current.colId]: newWidth }));
     };
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const tableData = (data && data.rows && data.rows.length > 0) ? data : {
+    columns: [
+      { id: "col_opp", name: "Opportunity", visible: true },
+      { id: "col_rprio", name: "Research ranked prio", visible: true },
+      { id: "col_iprio", name: "Internal prio level", visible: true },
+      { id: "col_obj", name: "Business objectives", visible: true },
+      { id: "col_about", name: "About", visible: true },
+      { id: "col_impact", name: "Impact", visible: true },
+      { id: "col_dk", name: "DK prior portal", visible: true },
+      { id: "col_se", name: "SE prior portal - redesigned Mitt3", visible: true },
+      { id: "col_proto", name: "Prototype test (2024)", visible: true },
+      { id: "col_b2b", name: "B2B admin portal (2026)", visible: true },
+      { id: "col_sol", name: "Solutions", visible: true },
+      { id: "col_exp", name: "Experiment", visible: true },
+    ],
+    rows: [
+      { id: "row_1", cells: { col_opp: "One-Step Access to Core Information", col_rprio: "1", col_iprio: "Now", col_obj: "Reduce task completion time for daily admin workflows", col_about: "Eliminate unnecessary drill-down levels for subscription details; surface all relevant info (user name, number, plan, SIM status) in the first view.", col_impact: "High – affects daily repetitive tasks such as name changes and plan checks.", col_dk: "\"It would be nice to have subscription details visible immediately instead of hunting through layers.\" ENREACH\n\n\"Previously, I could see everything directly; now I have to scroll and click 'see details.'\" CARLA", col_se: "\"This looks simpler, less steps, feels more logical.\" CARLA\n\n\"Easier to see things in one place now, but still not all details I'd expect—where do I find start date?\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Flat subscription detail view with all key info visible on first load", col_exp: "A/B test: collapsed vs. expanded default view" } },
+      { id: "row_2", cells: { col_opp: "Universal Search with Smart Filters", col_rprio: "2", col_iprio: "Now", col_obj: "Reduce time-to-find for subscription lookups", col_about: "Enable a global search bar that retrieves subscriptions by number, name, or account across all cost centers without pre-navigation.", col_impact: "High – reduces wasted time when responding to end-user requests.", col_dk: "\"We need to search quickly; now have to click into accounts before searching.\" ENREACH\n\n\"I now need to find the company and then the cost centre to find a number.\" AMBEA", col_se: "\"Where do I search across everything? I can't see a global search bar.\" ENREACH\n\n\"So, how do I find a person if I don't want to click around?\" CARLA", col_proto: "", col_b2b: "", col_sol: "Global search bar with cross-entity results + filter chips for type/account/status", col_exp: "Prototype test with 5 admins: measure lookup time vs. current flow" } },
+      { id: "row_3", cells: { col_opp: "Bulk Operations for High-Volume Tasks", col_rprio: "3", col_iprio: "Now", col_obj: "Enable efficient onboarding/offboarding at scale", col_about: "Provide bulk create/edit/delete flows for actions like:\n• Activating multiple SIMs\n• Owner/name changes\n• Moving numbers between accounts", col_impact: "Critical during onboarding/offboarding waves.", col_dk: "\"We miss being able to both create and change several at once.\" ENREACH", col_se: "\"It makes more sense to just order stuff as the orders come in… would be different if we could bulk handle hardware through the portal.\" CARLA", col_proto: "\"This would save time if I can select multiple numbers, but can I? Doesn't look like it yet.\"\n\n\"We miss bulk change—do you plan to add it here?\"", col_b2b: "", col_sol: "Multi-select + batch action bar for common operations (activate, change owner, move)", col_exp: "Wizard prototype for bulk SIM activation with 3 enterprise admins" } },
+      { id: "row_4", cells: { col_opp: "Real-Time Performance and System Response", col_rprio: "4", col_iprio: "Now", col_obj: "Ensure sub-2s response times for all portal operations", col_about: "Reduce page reload times, optimize database queries, and enable inline actions without full-page refresh.", col_impact: "High – persistent load delays slow down every task.", col_dk: "\"When we make extracts, it takes a long time and we need to clean them manually… the interface is slow to update after changes.\" ENREACH", col_se: "\"Takes a lot of time to upload results in current portal.\" AMBEA", col_proto: "(not applicable since Figma prototype)", col_b2b: "", col_sol: "Server-side pagination, optimistic UI updates, background processing for exports", col_exp: "Performance benchmark: measure load times before/after optimization sprint" } },
+      { id: "row_5", cells: { col_opp: "Role-Based Admin Access and Delegation", col_rprio: "5", col_iprio: "Next", col_obj: "Support compliance and decentralized admin management", col_about: "Introduce granular roles for assistants or department-level admins to manage only their scope (e.g., assigned cost centers).", col_impact: "High for compliance and decentralization, especially in large enterprises.", col_dk: "\"We have a lot of users with same role but all have full access; would be nice to limit depending on task.\" ENREACH", col_se: "\"High priority… allow admin access per cost centre.\" INVESTOR", col_proto: "(not applicable since Admin design was not part of prototype design)", col_b2b: "", col_sol: "Role-based permission matrix with scope-limited admin accounts", col_exp: "Co-design workshop with 2 enterprise IT admins on permission model" } },
+      { id: "row_6", cells: { col_opp: "Real-Time Usage & Cost Overviews", col_rprio: "6", col_iprio: "Next", col_obj: "Enable proactive cost control without manual data gathering", col_about: "Provide dashboard widgets showing:\n• Current spend vs. budget\n• Roaming activity alerts\n• High-data user highlights", col_impact: "High for cost control and proactive management.", col_dk: "\"Would be useful to handle roaming or extra data without going into files manually; now we have to look up most files in Excel to see data packages.\" ENREACH", col_se: "\"It would be nice to have alerts when a user has excessive usage abroad.\" BICO", col_proto: "", col_b2b: "", col_sol: "Dashboard with spend/budget widget, roaming alert cards, top-consumer list", col_exp: "Usage alert email mockup: test with 10 admins if threshold notifications reduce manual checks" } },
+      { id: "row_7", cells: { col_opp: "Reliable Activity History / Change Logs", col_rprio: "7", col_iprio: "Next", col_obj: "Provide full audit trail for multi-admin accountability", col_about: "Display who did what and when for accountability across multiple admins.", col_impact: "Critical for compliance in enterprise accounts.", col_dk: "\"Sometimes we need to know what date the subscription changed to another plan or who did it.\" ENREACH\n\n\"Multiple admins in some orgs need transparency.\" CARLA", col_se: "\"Where do I see what others changed? Doesn't seem here yet.\" CARLA\n\n\"Audit trail—will that be added? Important when multiple admins exist.\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Timestamped activity feed per subscription with admin identity and change details", col_exp: "Fake-door test: add 'View history' button and measure click rate" } },
+      { id: "row_8", cells: { col_opp: "Customizable Table Views and Column Management", col_rprio: "8", col_iprio: "Next", col_obj: "Improve efficiency for power users with personalized layouts", col_about: "Allow admins to choose columns, pin data, and save custom list layouts for faster scanning and task execution.", col_impact: "Medium – improves efficiency for experienced users.", col_dk: "\"We can't make an extract on a single customer, then we need to do it for all and clean manually.\"\n\n\"There's a manual input to the spreadsheet because filters are missing.\" ENREACH", col_se: "Limited mention, but frustration: \"You have to click into details for info, would be better in overview.\" CARLA", col_proto: "Positive reaction: \"Being able to customize columns or what you see is good, but is that possible here?\" (Carla).", col_b2b: "", col_sol: "Column picker, saved view presets, drag-to-reorder columns", col_exp: "Prototype: let 5 admins configure their ideal list view, compare task speed" } },
+      { id: "row_9", cells: { col_opp: "Intelligent Export & Reporting Experience", col_rprio: "9", col_iprio: "Later", col_obj: "Reduce manual data cleanup for finance and audits", col_about: "Offer filtered CSV/PDF export for selected entities, avoiding full-database dumps and manual cleanup.", col_impact: "Medium – recurring pain for finance audits and customer reports.", col_dk: "", col_se: "\"We need to download invoices and usage data multiple times, then move it into Oracle for approval.\" FEDEX", col_proto: "\"Will there be export by selection? That's critical.\" ENREACH", col_b2b: "", col_sol: "Filtered export with column/row selection + scheduled report generation", col_exp: "Concierge test: manually generate filtered exports for 3 admins, measure satisfaction" } },
+      { id: "row_10", cells: { col_opp: "Clearer Interaction Copy & Structure", col_rprio: "10", col_iprio: "Later", col_obj: "Reduce cognitive load and error rates during common flows", col_about: "Reduce cognitive load with better labels, fewer modal layers, and predictable flows:\n• Replace vague buttons (e.g., \"See details\") with descriptive actions\n• Remove redundant confirmations", col_impact: "Medium – improves learnability and error resilience.", col_dk: "\"It would be nice to filter by company first instead of all this scrolling… better overview by accounts.\" ENREACH", col_se: "\"Now I have to scroll down and click 'see details'; before it was clearer.\" CARLA\n\n\"I need to find the company and then the cost centre to find a number.\" AMBEA", col_proto: "CARLA: \"This looks simpler, less steps, feels more logical.\"", col_b2b: "", col_sol: "UX copy audit + action-oriented button labels + progressive disclosure", col_exp: "5-second test: old vs. new button labels—measure comprehension rate" } },
+      { id: "row_11", cells: { col_opp: "Alignment with Admin Mental Models", col_rprio: "11", col_iprio: "Next", col_obj: "Reduce task fragmentation by matching admin workflow patterns", col_about: "Restructure navigation and grouping of features to match admin workflows, not internal system logic:\n• Onboarding hub (create > assign > approve)\n• Cost control hub (monitor > report > export)", col_impact: "High – reduces task fragmentation.", col_dk: "\"Need option to choose between different companies at start… so we don't scroll everything.\" ENREACH", col_se: "\"Friction exists when admins shift between screens for related tasks.\" AMBEA", col_proto: "\"I think we need to have something when we can choose between different companies… accounts.\"\n→ Expected account-selection step earlier in flow.", col_b2b: "", col_sol: "Task-based navigation hubs (Onboarding, Cost control, Support) vs. entity-based", col_exp: "Card sort with 8 admins: validate navigation groupings match mental models" } },
+      { id: "row_12", cells: { col_opp: "Mobile-Responsive Interface for Emergency Tasks", col_rprio: "12", col_iprio: "Later", col_obj: "Enable critical actions without desktop dependency", col_about: "Enable simplified mobile interactions for critical tasks (SIM unlock, PIN lookup) without requiring full desktop workflows.", col_impact: "Medium – supports business continuity.", col_dk: "\"Sometimes we need to check details quickly – would be useful if possible without PC.\" ENREACH", col_se: "\"If I'm away from laptop, I'd log in quickly to check SIM code, but not for full orders.\" CARLA", col_proto: "No mobile version was shown; expectation raised for quick PIN view if needed.", col_b2b: "", col_sol: "Mobile-optimized emergency actions: SIM unlock, PIN view, quick status check", col_exp: "Diary study: ask 5 admins to log mobile needs for 2 weeks" } },
+      { id: "row_13", cells: { col_opp: "Compliance-First Authentication Experience", col_rprio: "13", col_iprio: "Later", col_obj: "Balance security compliance with login friction", col_about: "Maintain flexibility for MFA and BankID but support secure session timeouts and SSO for enterprise admins.\n\nMixed preferences for login (BankID vs credentials vs mid-ID) across markets.", col_impact: "Medium – trust and security adherence.", col_dk: "\"We use email and password… would two-factor be an option?\" ENREACH\n\n\"In Denmark it's all multifactor… using MitID in company tools.\" FEDEX", col_se: "\"I have BankID set up, I could use that, but usually use saved credentials because it's faster.\" CARLA", col_proto: "\"Will MFA and SSO be supported? Enterprise users expect both.\"", col_b2b: "", col_sol: "SSO + configurable MFA (BankID, MitID, TOTP) with admin-set session policies", col_exp: "Survey: collect MFA preferences from 20 admins across DK/SE markets" } },
+      { id: "row_14", cells: { col_opp: "Explainability & Transparency on Changes", col_rprio: "14", col_iprio: "Later", col_obj: "Prevent migration frustration through proactive communication", col_about: "Whenever UI redesign adds steps or alters hierarchy, communicate 'why' upfront, provide in-context tips.\n\nEvidence: Update complaints from existing users.", col_impact: "High – prevents frustration during migration.", col_dk: "(not redesigned recently so does not apply)", col_se: "\"So this functions differently now, but what happened to the old shortcuts?\" ENREACH\n\n\"Multiple users asked: 'Where do we find X now?' No in-line tips or explanation during new flow demo.\"", col_proto: "", col_b2b: "", col_sol: "In-context onboarding tips + 'What changed' changelog panel on login", col_exp: "Before/after test: measure support ticket volume with vs. without changelog" } },
+    ]
+  };
+
+  const updateData = (updates) => { onChange({ ...tableData, ...updates }); };
+  const addRow = () => {
+    const newRow = { id: generateId(), cells: tableData.columns.reduce((acc, col) => ({ ...acc, [col.id]: "" }), {}) };
     updateData({ rows: [...tableData.rows, newRow] });
   };
-  
   const updateCell = (rowId, columnId, value) => {
-    const updatedRows = tableData.rows.map(row =>
-      row.id === rowId
-        ? { ...row, cells: { ...row.cells, [columnId]: value } }
-        : row
-    );
-    updateData({ rows: updatedRows });
+    updateData({ rows: tableData.rows.map(row => row.id === rowId ? { ...row, cells: { ...row.cells, [columnId]: value } } : row) });
   };
-  
-  const deleteRow = (rowId) => {
-    updateData({ rows: tableData.rows.filter(row => row.id !== rowId) });
-  };
-  
+  const deleteRow = (rowId) => { updateData({ rows: tableData.rows.filter(row => row.id !== rowId) }); };
   const addColumn = () => {
-    const newColumn = { id: generateId(), name: "New Column", visible: true };
-    const updatedRows = tableData.rows.map(row => ({
-      ...row,
-      cells: { ...row.cells, [newColumn.id]: "" }
-    }));
-    updateData({ 
-      columns: [...tableData.columns, newColumn],
-      rows: updatedRows
-    });
+    const newCol = { id: generateId(), name: "New Column", visible: true };
+    updateData({ columns: [...tableData.columns, newCol], rows: tableData.rows.map(row => ({ ...row, cells: { ...row.cells, [newCol.id]: "" } })) });
   };
-  
-  const updateColumnName = (columnId, name) => {
-    const updatedColumns = tableData.columns.map(col =>
-      col.id === columnId ? { ...col, name } : col
-    );
-    updateData({ columns: updatedColumns });
-  };
-  
-  const toggleColumnVisibility = (columnId) => {
-    const updatedColumns = tableData.columns.map(col =>
-      col.id === columnId ? { ...col, visible: !col.visible } : col
-    );
-    updateData({ columns: updatedColumns });
-  };
-  
-  const deleteColumn = (columnId) => {
-    const updatedColumns = tableData.columns.filter(col => col.id !== columnId);
-    const updatedRows = tableData.rows.map(row => {
-      const newCells = { ...row.cells };
-      delete newCells[columnId];
-      return { ...row, cells: newCells };
-    });
-    updateData({ columns: updatedColumns, rows: updatedRows });
-  };
-  
-  const handleDragStart = (e, index) => {
-    setDraggedRowIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-  
+  const updateColumnName = (colId, name) => { updateData({ columns: tableData.columns.map(c => c.id === colId ? { ...c, name } : c) }); };
+  const toggleColumnVisibility = (colId) => { updateData({ columns: tableData.columns.map(c => c.id === colId ? { ...c, visible: !c.visible } : c) }); };
+  const deleteColumn = (colId) => { updateData({ columns: tableData.columns.filter(c => c.id !== colId), rows: tableData.rows.map(r => { const cells = { ...r.cells }; delete cells[colId]; return { ...r, cells }; }) }); };
+
+  const handleDragStart = (e, index) => { setDraggedRowIndex(index); e.dataTransfer.effectAllowed = "move"; };
   const handleDragOver = (e, index) => {
     e.preventDefault();
     if (draggedRowIndex === null || draggedRowIndex === index) return;
-    
     const newRows = [...tableData.rows];
-    const draggedRow = newRows[draggedRowIndex];
+    const dragged = newRows[draggedRowIndex];
     newRows.splice(draggedRowIndex, 1);
-    newRows.splice(index, 0, draggedRow);
-    
+    newRows.splice(index, 0, dragged);
     updateData({ rows: newRows });
     setDraggedRowIndex(index);
   };
-  
-  const handleDragEnd = () => {
-    setDraggedRowIndex(null);
-  };
-  
+  const handleDragEnd = () => { setDraggedRowIndex(null); };
+
   const visibleColumns = tableData.columns.filter(col => col.visible);
-  
+
   return (
     <div>
-      <SectionHeader 
-        title="Discovery Research" 
-        description="Track opportunities, priorities, objectives, and evidence for informed decision-making."
-      />
-      
-      {/* Controls */}
+      <SectionHeader title="Discovery Research" description="Track opportunities, priorities, objectives, and evidence for informed decision-making." />
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
-          <button
-            onClick={addRow}
-            className="px-3 py-2 text-sm bg-slate-800 dark:bg-slate-600 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors font-medium"
-          >
-            + Add Row
-          </button>
-          <button
-            onClick={addColumn}
-            className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium"
-          >
-            + Add Column
-          </button>
+          <button onClick={addRow} className="px-3 py-2 text-sm bg-slate-800 dark:bg-slate-600 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors font-medium">+ Add Row</button>
+          <button onClick={addColumn} className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium">+ Add Column</button>
         </div>
-        <button
-          onClick={() => setColumnOrganizer(!columnOrganizer)}
-          className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-          </svg>
+        <button onClick={() => setColumnOrganizer(!columnOrganizer)} className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
           Organize Columns
         </button>
       </div>
-      
-      {/* Column Organizer */}
       {columnOrganizer && (
         <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Column Visibility</h3>
@@ -5073,365 +5043,87 @@ const DiscoveryTableSection = ({ data, onChange }) => {
             {tableData.columns.map((col) => (
               <div key={col.id} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.id)}
-                    className="w-4 h-4 text-slate-800 dark:text-slate-600 focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 rounded"
-                  />
-                  <input
-                    type="text"
-                    value={col.name}
-                    onChange={(e) => updateColumnName(col.id, e.target.value)}
-                    className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-                  />
+                  <input type="checkbox" checked={col.visible} onChange={() => toggleColumnVisibility(col.id)} className="w-4 h-4 rounded" />
+                  <input type="text" value={col.name} onChange={(e) => updateColumnName(col.id, e.target.value)} className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400" />
                 </div>
-                <button
-                  onClick={() => deleteColumn(col.id)}
-                  className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                  title="Delete column"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                <button onClick={() => deleteColumn(col.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete column">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             ))}
           </div>
         </div>
       )}
-      
-      {/* Table */}
       {tableData.rows.length === 0 ? (
         <div className="text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
-          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
           <p className="text-sm">No data yet</p>
           <p className="text-xs mt-1">Add rows to start tracking discovery research</p>
         </div>
       ) : (
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-800">
+          <table ref={tableRef} className="w-full" style={{ tableLayout: Object.keys(columnWidths).length > 0 ? 'fixed' : 'auto' }}>
+            <colgroup>
+              <col style={{ width: '40px' }} />
+              {visibleColumns.map((col) => (
+                <col key={col.id} style={columnWidths[col.id] ? { width: columnWidths[col.id] + 'px' } : {}} />
+              ))}
+              <col style={{ width: '40px' }} />
+            </colgroup>
+            <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
               <tr>
-                <th className="w-12 px-3 py-2 text-left"></th>
+                <th className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800"></th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border-l border-slate-200 dark:border-slate-700" colSpan={1}>Common needs level 1</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700" colSpan={2}>Priority (Now, Next, Later)</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700" colSpan={1}>Objectives</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700" colSpan={2}>Analysis</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border-l border-slate-200 dark:border-slate-700" colSpan={4}>Evidence</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-l border-slate-200 dark:border-slate-700" colSpan={2}>Going forward</th>
+                <th className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800"></th>
+              </tr>
+              <tr>
+                <th className="px-2 py-2 text-left bg-slate-50 dark:bg-slate-800"></th>
                 {visibleColumns.map((col) => (
-                  <th key={col.id} className="px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200 dark:border-slate-700 min-w-[150px]">
-                    {col.name}
+                  <th key={col.id} className="px-2 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 relative group">
+                    <span className="truncate block pr-2">{col.name}</span>
+                    <div onMouseDown={(e) => handleResizeStart(e, col.id)} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400/50 group-hover:bg-slate-300/50 dark:group-hover:bg-slate-600/50" />
                   </th>
                 ))}
-                <th className="w-12 px-3 py-2 text-left border-l border-slate-200 dark:border-slate-700"></th>
+                <th className="px-2 py-2 text-left border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"></th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-900">
               {tableData.rows.map((row, rowIndex) => (
-                <tr
-                  key={row.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, rowIndex)}
-                  onDragOver={(e) => handleDragOver(e, rowIndex)}
-                  onDragEnd={handleDragEnd}
-                  className={`border-t border-slate-200 dark:border-slate-700 ${draggedRowIndex === rowIndex ? 'opacity-50' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/50`}
-                >
-                  <td className="px-3 py-2 cursor-move">
-                    <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                    </svg>
+                <tr key={row.id} draggable onDragStart={(e) => handleDragStart(e, rowIndex)} onDragOver={(e) => handleDragOver(e, rowIndex)} onDragEnd={handleDragEnd}
+                  className={`border-t border-slate-200 dark:border-slate-700 ${draggedRowIndex === rowIndex ? 'opacity-50' : ''} hover:bg-slate-50/50 dark:hover:bg-slate-800/30`}>
+                  <td className="px-2 py-2 cursor-move align-top">
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" /></svg>
                   </td>
-                  {visibleColumns.map((col) => (
-                    <td key={col.id} className="px-3 py-2 border-l border-slate-200 dark:border-slate-700">
-                      <textarea
-                        value={row.cells[col.id] || ""}
-                        onChange={(e) => updateCell(row.id, col.id, e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 rounded resize-none"
-                        rows={2}
-                        placeholder="Enter value..."
-                      />
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 border-l border-slate-200 dark:border-slate-700">
-                    <button
-                      onClick={() => deleteRow(row.id)}
-                      className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                      title="Delete row"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                  {visibleColumns.map((col) => {
+                    const sectionBg =
+                      col.id === "col_opp" ? "bg-amber-50/40 dark:bg-amber-900/10" :
+                      (col.id === "col_dk" || col.id === "col_se" || col.id === "col_proto" || col.id === "col_b2b") ? "bg-purple-50/40 dark:bg-purple-900/10" :
+                      (col.id === "col_sol" || col.id === "col_exp") ? "bg-emerald-50/40 dark:bg-emerald-900/10" : "";
+                    return (
+                      <td key={col.id} className={`px-2 py-1 border-l border-slate-200 dark:border-slate-700 align-top ${sectionBg}`}>
+                        <textarea
+                          value={row.cells[col.id] || ""}
+                          onChange={(e) => { updateCell(row.id, col.id, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                          ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                          className={`w-full px-1 py-1 text-xs border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 rounded resize-none overflow-hidden ${col.id === "col_opp" ? "font-bold" : ""}`}
+                          placeholder=""
+                        />
+                      </td>
+                    );
+                  })}
+                  <td className="px-2 py-2 border-l border-slate-200 dark:border-slate-700 align-top">
+                    <button onClick={() => deleteRow(row.id)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete row">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- Opportunity Solution Tree Section ---
-const OpportunitySolutionTreeSection = ({ data, onChange }) => {
-  // Initialize data structure if empty
-  const treeData = data || {
-    outcome: { id: "outcome", text: "Reduce operational friction for B2B admins" },
-    opportunities: []
-  };
-  
-  const updateData = (updates) => {
-    onChange({ ...treeData, ...updates });
-  };
-  
-  const updateOutcome = (text) => {
-    updateData({ outcome: { ...treeData.outcome, text } });
-  };
-  
-  const addOpportunity = () => {
-    const newOpportunity = {
-      id: generateId(),
-      text: "New Opportunity",
-      solutions: []
-    };
-    updateData({ opportunities: [...treeData.opportunities, newOpportunity] });
-  };
-  
-  const updateOpportunity = (oppId, text) => {
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId ? { ...opp, text } : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const deleteOpportunity = (oppId) => {
-    updateData({ opportunities: treeData.opportunities.filter(opp => opp.id !== oppId) });
-  };
-  
-  const addSolution = (oppId) => {
-    const newSolution = {
-      id: generateId(),
-      text: "New Solution",
-      experiments: []
-    };
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId ? { ...opp, solutions: [...opp.solutions, newSolution] } : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const updateSolution = (oppId, solId, text) => {
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId
-        ? { ...opp, solutions: opp.solutions.map(sol => sol.id === solId ? { ...sol, text } : sol) }
-        : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const deleteSolution = (oppId, solId) => {
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId ? { ...opp, solutions: opp.solutions.filter(sol => sol.id !== solId) } : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const addExperiment = (oppId, solId) => {
-    const newExperiment = {
-      id: generateId(),
-      text: "New Experiment"
-    };
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId
-        ? {
-            ...opp,
-            solutions: opp.solutions.map(sol =>
-              sol.id === solId ? { ...sol, experiments: [...sol.experiments, newExperiment] } : sol
-            )
-          }
-        : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const updateExperiment = (oppId, solId, expId, text) => {
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId
-        ? {
-            ...opp,
-            solutions: opp.solutions.map(sol =>
-              sol.id === solId
-                ? { ...sol, experiments: sol.experiments.map(exp => exp.id === expId ? { ...exp, text } : exp) }
-                : sol
-            )
-          }
-        : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  const deleteExperiment = (oppId, solId, expId) => {
-    const updated = treeData.opportunities.map(opp =>
-      opp.id === oppId
-        ? {
-            ...opp,
-            solutions: opp.solutions.map(sol =>
-              sol.id === solId ? { ...sol, experiments: sol.experiments.filter(exp => exp.id !== expId) } : sol
-            )
-          }
-        : opp
-    );
-    updateData({ opportunities: updated });
-  };
-  
-  return (
-    <div>
-      <SectionHeader 
-        title="Opportunity Solution Tree" 
-        description="Map the desired outcome to opportunities, solutions, and experiments for strategic decision-making."
-      />
-      
-      {/* Outcome */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Desired Outcome</h3>
-        </div>
-        <div className="flex justify-center">
-          <div className="w-full max-w-md">
-            <textarea
-              value={treeData.outcome.text}
-              onChange={(e) => updateOutcome(e.target.value)}
-              className="w-full px-4 py-3 text-center font-medium text-slate-900 dark:text-slate-100 bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600 resize-none"
-              rows={2}
-              placeholder="Enter your desired business outcome..."
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Add Opportunity Button */}
-      <div className="flex justify-center mb-6">
-        <button
-          onClick={addOpportunity}
-          className="px-4 py-2 text-sm bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors font-medium flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Opportunity
-        </button>
-      </div>
-      
-      {/* Opportunities */}
-      {treeData.opportunities.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
-          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <p className="text-sm">No opportunities yet</p>
-          <p className="text-xs mt-1">Add opportunities to start building your solution tree</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {treeData.opportunities.map((opp) => (
-            <div key={opp.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-6 bg-slate-50 dark:bg-slate-800/50">
-              {/* Opportunity */}
-              <div className="mb-6">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="flex-1">
-                    <textarea
-                      value={opp.text}
-                      onChange={(e) => updateOpportunity(opp.id, e.target.value)}
-                      className="w-full px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 dark:focus:ring-purple-600 resize-none"
-                      rows={2}
-                      placeholder="Describe the opportunity..."
-                    />
-                  </div>
-                  <button
-                    onClick={() => deleteOpportunity(opp.id)}
-                    className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    title="Delete opportunity"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  onClick={() => addSolution(opp.id)}
-                  className="px-3 py-1.5 text-xs bg-emerald-600 dark:bg-emerald-700 text-white rounded-md hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors font-medium"
-                >
-                  + Add Solution
-                </button>
-              </div>
-              
-              {/* Solutions */}
-              {opp.solutions.length > 0 && (
-                <div className="pl-6 space-y-4 border-l-2 border-purple-300 dark:border-purple-700">
-                  {opp.solutions.map((sol) => (
-                    <div key={sol.id} className="bg-white dark:bg-slate-900 rounded-lg p-4">
-                      {/* Solution */}
-                      <div className="mb-3">
-                        <div className="flex items-start gap-3 mb-2">
-                          <div className="flex-1">
-                            <textarea
-                              value={sol.text}
-                              onChange={(e) => updateSolution(opp.id, sol.id, e.target.value)}
-                              className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-600 resize-none"
-                              rows={2}
-                              placeholder="Describe the solution..."
-                            />
-                          </div>
-                          <button
-                            onClick={() => deleteSolution(opp.id, sol.id)}
-                            className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                            title="Delete solution"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => addExperiment(opp.id, sol.id)}
-                          className="px-2.5 py-1 text-xs bg-sky-600 dark:bg-sky-700 text-white rounded-md hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors font-medium"
-                        >
-                          + Add Experiment
-                        </button>
-                      </div>
-                      
-                      {/* Experiments */}
-                      {sol.experiments.length > 0 && (
-                        <div className="pl-4 space-y-2 border-l-2 border-emerald-300 dark:border-emerald-700">
-                          {sol.experiments.map((exp) => (
-                            <div key={exp.id} className="flex items-start gap-2">
-                              <div className="flex-1">
-                                <textarea
-                                  value={exp.text}
-                                  onChange={(e) => updateExperiment(opp.id, sol.id, exp.id, e.target.value)}
-                                  className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-sky-100 dark:bg-sky-900/40 border border-sky-300 dark:border-sky-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-600 resize-none"
-                                  rows={1}
-                                  placeholder="Describe the experiment..."
-                                />
-                              </div>
-                              <button
-                                onClick={() => deleteExperiment(opp.id, sol.id, exp.id)}
-                                className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors mt-2"
-                                title="Delete experiment"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
         </div>
       )}
     </div>
@@ -5565,11 +5257,6 @@ export default function RequirementAnalyzer() {
     }
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
-
-  // Persist app mode
-  useEffect(() => {
-    localStorage.setItem("appMode", appMode);
-  }, [appMode]);
 
   // Load from URL share link on mount
   useEffect(() => {
@@ -7008,29 +6695,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
   const renderSection = () => {
     const lang = active.language || "en";
-    
-    // Discovery mode sections
-    if (appMode === "discovery") {
-      switch (activeSection) {
-        case "discoveryTable":
-          return <DiscoveryTableSection 
-            data={active.discoveryTable} 
-            onChange={(v) => updateActive("discoveryTable", v)} 
-          />;
-        case "opportunityTree":
-          return <OpportunitySolutionTreeSection 
-            data={active.opportunityTree} 
-            onChange={(v) => updateActive("opportunityTree", v)} 
-          />;
-        default:
-          return <DiscoveryTableSection 
-            data={active.discoveryTable} 
-            onChange={(v) => updateActive("discoveryTable", v)} 
-          />;
-      }
-    }
-    
-    // Design Specs mode sections
     switch (activeSection) {
       case "overview": return <OverviewSection 
         data={active.overview} 
@@ -7071,6 +6735,9 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       case "design": return <DesignSystemSection data={active.design || {}} language={lang} onChange={(v) => updateActive("design", v)} />;
       case "wireframe": return <WireframeSection data={active.wireframe || { iaSteps: [] }} analysis={active} language={lang} githubAIKey={githubAIKey} onChange={(v) => updateActive("wireframe", v)} />;
       case "summary": return <SummarySection data={active.summary} language={lang} analysis={active} onChange={(v) => updateActive("summary", v)} onGenerateAIBrief={() => handleGenerateAIBrief()} />;
+      // Discovery mode sections
+      case "discoveryTable": return <DiscoveryTableSection data={active.discoveryTable} onChange={(v) => updateActive("discoveryTable", v)} />;
+      case "opportunityTree": return <OSTCanvas data={active.opportunityTree} onChange={(v) => updateActive("opportunityTree", v)} />;
       default: return null;
     }
   };
@@ -7087,325 +6754,329 @@ Be concise and actionable. Respond in the same language the user writes in.`;
               mode={appMode} 
               onChange={(newMode) => {
                 setAppMode(newMode);
+                localStorage.setItem("appMode", newMode);
                 setActiveSection(newMode === "discovery" ? "discoveryTable" : "overview");
               }} 
             />
             
             {/* Section nav */}
             <div className="flex gap-1 flex-wrap">
-              {(appMode === "discovery" ? DISCOVERY_SECTIONS : DESIGN_SECTIONS).map((s) => {
+              {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
                 const lang = active.language || "en";
                 const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
                 const getCountText = () => {
-                    if (s.id === "assumptions") {
-                      const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
-                      return `${open}`;
-                    }
-                    if (s.id === "questions") {
-                      const open = active.questions.filter(q => q.status === "Open").length;
-                      return `${open}`;
-                    }
-                    return undefined;
-                  };
-                  return (
-                    <Pill
-                      key={s.id}
-                      active={activeSection === s.id}
-                      onClick={() => setActiveSection(s.id)}
-                      completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
-                      count={getCountText()}
-                    >
-                      <span className="mr-1 opacity-60">{s.icon}</span>
-                      {t.sections[s.id] || s.label}
-                    </Pill>
-                  );
-                })}
-              </div>
+                  if (s.id === "assumptions") {
+                    const open = active.assumptions.filter(a => a.status === "Unvalidated" || a.status === "Needs Research").length;
+                    return `${open}`;
+                  }
+                  if (s.id === "questions") {
+                    const open = active.questions.filter(q => q.status === "Open").length;
+                    return `${open}`;
+                  }
+                  return undefined;
+                };
+                return (
+                  <Pill
+                    key={s.id}
+                    active={activeSection === s.id}
+                    onClick={() => setActiveSection(s.id)}
+                    completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
+                    count={getCountText()}
+                  >
+                    <span className="mr-1 opacity-60">{s.icon}</span>
+                    {t.sections[s.id] || s.label}
+                  </Pill>
+                );
+              })}
             </div>
-            
-            {/* Right: Task info and controls */}
-            <div className="flex-1 flex flex-col gap-2 min-w-0">
-              <div className="flex items-center gap-3">
-                {!sidebarOpen && appMode !== "discovery" && (
-                  <button onClick={() => setSidebarOpen(true)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Show sidebar">
+          </div>
+          
+          {/* Right: Task info and controls */}
+          <div className="flex-1 flex flex-col gap-2 min-w-0">
+            <div className="flex items-center gap-3">
+              {!sidebarOpen && appMode !== "discovery" && (
+                <button onClick={() => setSidebarOpen(true)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Show sidebar">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+              <input
+                className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 flex-1 px-0"
+                value={active.name} onChange={(e) => updateName(e.target.value)}
+                placeholder={appMode === "discovery" ? "Discovery name..." : "Analysis name..."}
+              />
+              <div className="flex items-center gap-2 shrink-0">
+                {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
+                {appMode !== "discovery" && (
+                  <>
+                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
+                        style={{ width: `${completion}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+                  </>
+                )}
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                  title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {darkMode ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                    actionsPanelOpen 
+                      ? "text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200" 
+                      : "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500"
+                  }`}
+                  title={actionsPanelOpen ? "Close actions panel" : "Open actions panel"}
+                >
+                  {actionsPanelOpen ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </button>
-                )}
-                <input
-                  className="text-lg font-semibold text-slate-800 dark:text-slate-100 bg-transparent border-none outline-none focus:ring-0 flex-1 px-0"
-                  value={active.name} onChange={(e) => updateName(e.target.value)}
-                  placeholder={appMode === "discovery" ? "Discovery name..." : "Analysis name..."}
-                />
-                <div className="flex items-center gap-2 shrink-0">
-                  {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
-                  {appMode !== "discovery" && (
+                  ) : (
                     <>
-                      <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
-                          style={{ width: `${completion}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                      <span>Open Actions</span>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
                     </>
                   )}
-                  <button
-                    onClick={() => setDarkMode(!darkMode)}
-                    className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                    title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                  >
-                    {darkMode ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      actionsPanelOpen 
-                        ? "text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200" 
-                        : "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500"
-                    }`}
-                    title={actionsPanelOpen ? "Close actions panel" : "Open actions panel"}
-                  >
-                    {actionsPanelOpen ? (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                        </svg>
-                        <span>Open Actions</span>
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      {/* Below header: Sidebar + Content + Right Panel */}
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar toggle when closed */}
-        {!sidebarOpen && appMode !== "discovery" && (
-          <button 
-            onClick={() => setSidebarOpen(true)} 
-            className="w-10 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col items-center pt-4 shrink-0 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-            title="Show feature list"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-        {/* Sidebar - Hide in Discovery mode */}
-        {sidebarOpen && appMode !== "discovery" && (
-          <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
-            <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Feature list</h1>
-                </div>
-                <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close sidebar">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
                 </button>
               </div>
             </div>
-
-            {/* Phase filter */}
-            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-              <div className="flex gap-1 flex-wrap">
-                {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
-                  const count = phaseCounts[f] || 0;
-                  if (f !== "All" && count === 0) return null;
-                  const isActive = phaseFilter === f;
-                  const colors = VERSION_COLORS[f];
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => setPhaseFilter(f)}
-                      className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                        isActive
-                          ? colors
-                            ? `${colors.bg} ${colors.text} font-medium`
-                            : "bg-slate-800 text-white font-medium"
-                          : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-                      }`}
-                    >
-                      {f} {count > 0 && <span className="opacity-60">{count}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-2">
-              {filteredAnalyses.map((a) => {
-                const comp = getCompletion(a);
-                return (
-                  <div
-                    key={a.id}
-                    onClick={() => { setActiveId(a.id); setActiveSection("overview"); }}
-                    className={`mx-2 mb-1 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors ${
-                      a.id === activeId ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                    }`}
-                  >
-                    {a.jiraTicket && (
-                      <div className="text-[10px] font-semibold tracking-wider text-slate-600 dark:text-slate-400 uppercase mb-1">
-                        {a.jiraTicket}
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between gap-1">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words">{a.name || "Untitled Design Task"}</span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {a.secureMode && (
-                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700" title="Secure mode enabled">
-                            <svg className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                          </div>
-                        )}
-                        {a.phase && <VersionBadge version={a.phase} size="xs" />}
-                        {analyses.length > 1 && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
-                            className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 opacity-0 group-hover:opacity-100 text-sm ml-1"
-                          >×</button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {filteredAnalyses.length === 0 && (
-                <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                  No analyses in this phase.
-                </div>
-              )}
-            </div>
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
-              {/* New Design Task Button */}
-              <button
-                onClick={createNew}
-                className="w-full py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors font-medium"
-              >
-                + New design task
-              </button>
-              
-              {/* Export Options Section */}
-              {syncOptionsExpanded && (
-                <div className="space-y-2 mb-2">
-                  {!active?.secureMode && gistExpanded && (
-                    <div className="space-y-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                      <div>
-                        <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">GitHub Token</label>
-                        <input
-                          type="password"
-                          placeholder="ghp_..."
-                          value={githubToken}
-                          onChange={(e) => setGithubToken(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-                        />
-                        <a
-                          href="https://github.com/settings/tokens/new?description=Requirement%20Analyzer&scopes=gist"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline mt-1 inline-block"
-                        >
-                          Create token
-                        </a>
-                      </div>
-                      <button
-                        onClick={handleSaveToGist}
-                        disabled={gistLoading || !githubToken}
-                        className="w-full py-2.5 text-sm text-white bg-slate-800 dark:bg-slate-600 hover:bg-slate-700 dark:hover:bg-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                      >
-                        {gistLoading ? "Saving..." : active?.gistId ? "Update Gist" : "Save to Gist"}
-                      </button>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Gist ID"
-                          value={loadGistId}
-                          onChange={(e) => setLoadGistId(e.target.value)}
-                          className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-                        />
-                        <button
-                          onClick={handleLoadFromGist}
-                          disabled={gistLoading || !loadGistId.trim()}
-                          className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded hover:border-slate-400 dark:hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                        >
-                          Load
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {!active?.secureMode && (
-                    <button
-                      onClick={() => setGistExpanded(!gistExpanded)}
-                      className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
-                      title="Cloud backup: Saves your active task to GitHub as a private gist. Share the Gist ID with others to let them import a copy."
-                    >
-                      GitHub Sync {gistExpanded ? "⌄" : "⌃"}
-                    </button>
-                  )}
-                  <button
-                    onClick={handleExportJson}
-                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                  >
-                    Share active task
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImportMd}
-                    accept=".md,.markdown,.txt"
-                    className="hidden"
-                  />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                  >
-                    Import Markdown
-                  </button>
-                  <button onClick={handleExportMd} className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors">
-                    Export as Markdown
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={() => setSyncOptionsExpanded(!syncOptionsExpanded)}
-                className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
-              >
-                Export options {syncOptionsExpanded ? "⌄" : "⌃"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className={activeSection === "mapping" ? "px-6 py-8" : "max-w-2xl mx-auto px-6 py-8"}>
-            {renderSection()}
           </div>
         </div>
+      </div>
+
+      {/* Below header: Sidebar + Content + Right Panel */}
+      <div className="flex flex-1 min-h-0">
+      {/* Sidebar - Hide in Discovery mode */}
+      {sidebarOpen && appMode !== "discovery" && (
+        <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
+          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Design task manager</h1>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Structured documentation & AI brief generation</p>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" title="Close sidebar">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Phase filter */}
+          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex gap-1 flex-wrap">
+              {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
+                const count = phaseCounts[f] || 0;
+                if (f !== "All" && count === 0) return null;
+                const isActive = phaseFilter === f;
+                const colors = VERSION_COLORS[f];
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setPhaseFilter(f)}
+                    className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                      isActive
+                        ? colors
+                          ? `${colors.bg} ${colors.text} font-medium`
+                          : "bg-slate-800 text-white font-medium"
+                        : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {f} {count > 0 && <span className="opacity-60">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-2">
+            {filteredAnalyses.map((a) => {
+              const comp = getCompletion(a);
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => { setActiveId(a.id); setActiveSection("overview"); }}
+                  className={`mx-2 mb-1 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors ${
+                    a.id === activeId ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  }`}
+                >
+                  {a.jiraTicket && (
+                    <div className="text-[10px] font-semibold tracking-wider text-slate-600 dark:text-slate-400 uppercase mb-1">
+                      {a.jiraTicket}
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words">{a.name || "Untitled Design Task"}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {a.secureMode && (
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700" title="Secure mode enabled">
+                          <svg className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        </div>
+                      )}
+                      {a.phase && <VersionBadge version={a.phase} size="xs" />}
+                      {analyses.length > 1 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
+                          className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 opacity-0 group-hover:opacity-100 text-sm ml-1"
+                        >×</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredAnalyses.length === 0 && (
+              <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                No analyses in this phase.
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
+            {/* New Design Task Button */}
+            <button
+              onClick={createNew}
+              className="w-full py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors font-medium"
+            >
+              + New design task
+            </button>
+            
+            {/* Export Options Section */}
+            {syncOptionsExpanded && (
+              <div className="space-y-2 mb-2">
+                {/* GitHub Gist Sync - Only when current analysis doesn't have secure mode */}
+                {!active?.secureMode && gistExpanded && (
+                  <div className="space-y-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                    {/* GitHub Token */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">GitHub Token</label>
+                      <input
+                        type="password"
+                        placeholder="ghp_..."
+                        value={githubToken}
+                        onChange={(e) => setGithubToken(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                      <a
+                        href="https://github.com/settings/tokens/new?description=Requirement%20Analyzer&scopes=gist"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline mt-1 inline-block"
+                      >
+                        Create token
+                      </a>
+                    </div>
+                    
+                    {/* Save to Gist */}
+                    <button
+                      onClick={handleSaveToGist}
+                      disabled={gistLoading || !githubToken}
+                      className="w-full py-2.5 text-sm text-white bg-slate-800 dark:bg-slate-600 hover:bg-slate-700 dark:hover:bg-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    >
+                      {gistLoading ? "Saving..." : active?.gistId ? "Update Gist" : "Save to Gist"}
+                    </button>
+                    
+                    {/* Load from Gist */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Gist ID"
+                        value={loadGistId}
+                        onChange={(e) => setLoadGistId(e.target.value)}
+                        className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                      <button
+                        onClick={handleLoadFromGist}
+                        disabled={gistLoading || !loadGistId.trim()}
+                        className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded hover:border-slate-400 dark:hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {!active?.secureMode && (
+                  <button
+                    onClick={() => setGistExpanded(!gistExpanded)}
+                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
+                    title="Cloud backup: Saves your active task to GitHub as a private gist. Share the Gist ID with others to let them import a copy. Changes don't auto-sync between people - each save/load creates an independent snapshot."
+                  >
+                    GitHub Sync {gistExpanded ? "⌄" : "⌃"}
+                  </button>
+                )}
+                
+                {/* Share Link */}
+                <button
+                  onClick={handleExportJson}
+                  className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                >
+                  Share active task
+                </button>
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImportMd}
+                  accept=".md,.markdown,.txt"
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                >
+                  Import Markdown
+                </button>
+                <button onClick={handleExportMd} className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors">
+                  Export as Markdown
+                </button>
+              </div>
+            )}
+            
+            {/* Export Options Toggle Button */}
+            <button
+              onClick={() => setSyncOptionsExpanded(!syncOptionsExpanded)}
+              className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
+            >
+              Export options {syncOptionsExpanded ? "⌄" : "⌃"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {activeSection === "opportunityTree" ? (
+          <div className="h-full">{renderSection()}</div>
+        ) : (
+          <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-6 py-8" : "max-w-2xl mx-auto px-6 py-8"}>
+            {renderSection()}
+          </div>
+        )}
+      </div>
 
       {/* Right Panel — Actions / AI Chat tabs */}
       {actionsPanelOpen && (
@@ -7455,7 +7126,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           )}
         </div>
       )}
-      </div>
 
       {/* Audio Analysis Modal - Only when current analysis doesn't have secure mode */}
       {!active?.secureMode && (
@@ -7556,6 +7226,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
