@@ -23,6 +23,8 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import OSTCanvas from "./OSTCanvas.jsx";
+import DocumentsSection from "./DocumentsSection.jsx";
+import FeedbackSection from "./FeedbackSection.jsx";
 
 // --- Encryption Utilities for Secure localStorage ---
 // Uses Web Crypto API to encrypt sensitive data at rest
@@ -392,6 +394,8 @@ const SECTIONS = [
 const DISCOVERY_SECTIONS = [
   { id: "discoveryTable", label: "Discovery Research", icon: "◫" },
   { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◆" },
+  { id: "sourceDocuments", label: "Source Documents", icon: "◉" },
+  { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
 ];
 
 const ORIGIN_OPTIONS = [
@@ -4929,6 +4933,7 @@ const DiscoveryTableSection = ({ data, onChange }) => {
   const [draggedRowIndex, setDraggedRowIndex] = useState(null);
   const [columnOrganizer, setColumnOrganizer] = useState(false);
   const [columnWidths, setColumnWidths] = useState({});
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false);
   const resizingRef = useRef(null);
   const tableRef = useRef(null);
 
@@ -4974,24 +4979,32 @@ const DiscoveryTableSection = ({ data, onChange }) => {
       { id: "col_exp", name: "Experiment", visible: true },
     ],
     rows: [
-      { id: "row_1", cells: { col_opp: "One-Step Access to Core Information", col_rprio: "1", col_iprio: "Now", col_obj: "Reduce task completion time for daily admin workflows", col_about: "Eliminate unnecessary drill-down levels for subscription details; surface all relevant info (user name, number, plan, SIM status) in the first view.", col_impact: "High – affects daily repetitive tasks such as name changes and plan checks.", col_dk: "\"It would be nice to have subscription details visible immediately instead of hunting through layers.\" ENREACH\n\n\"Previously, I could see everything directly; now I have to scroll and click 'see details.'\" CARLA", col_se: "\"This looks simpler, less steps, feels more logical.\" CARLA\n\n\"Easier to see things in one place now, but still not all details I'd expect—where do I find start date?\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Flat subscription detail view with all key info visible on first load", col_exp: "A/B test: collapsed vs. expanded default view" } },
-      { id: "row_2", cells: { col_opp: "Universal Search with Smart Filters", col_rprio: "2", col_iprio: "Now", col_obj: "Reduce time-to-find for subscription lookups", col_about: "Enable a global search bar that retrieves subscriptions by number, name, or account across all cost centers without pre-navigation.", col_impact: "High – reduces wasted time when responding to end-user requests.", col_dk: "\"We need to search quickly; now have to click into accounts before searching.\" ENREACH\n\n\"I now need to find the company and then the cost centre to find a number.\" AMBEA", col_se: "\"Where do I search across everything? I can't see a global search bar.\" ENREACH\n\n\"So, how do I find a person if I don't want to click around?\" CARLA", col_proto: "", col_b2b: "", col_sol: "Global search bar with cross-entity results + filter chips for type/account/status", col_exp: "Prototype test with 5 admins: measure lookup time vs. current flow" } },
-      { id: "row_3", cells: { col_opp: "Bulk Operations for High-Volume Tasks", col_rprio: "3", col_iprio: "Now", col_obj: "Enable efficient onboarding/offboarding at scale", col_about: "Provide bulk create/edit/delete flows for actions like:\n• Activating multiple SIMs\n• Owner/name changes\n• Moving numbers between accounts", col_impact: "Critical during onboarding/offboarding waves.", col_dk: "\"We miss being able to both create and change several at once.\" ENREACH", col_se: "\"It makes more sense to just order stuff as the orders come in… would be different if we could bulk handle hardware through the portal.\" CARLA", col_proto: "\"This would save time if I can select multiple numbers, but can I? Doesn't look like it yet.\"\n\n\"We miss bulk change—do you plan to add it here?\"", col_b2b: "", col_sol: "Multi-select + batch action bar for common operations (activate, change owner, move)", col_exp: "Wizard prototype for bulk SIM activation with 3 enterprise admins" } },
-      { id: "row_4", cells: { col_opp: "Real-Time Performance and System Response", col_rprio: "4", col_iprio: "Now", col_obj: "Ensure sub-2s response times for all portal operations", col_about: "Reduce page reload times, optimize database queries, and enable inline actions without full-page refresh.", col_impact: "High – persistent load delays slow down every task.", col_dk: "\"When we make extracts, it takes a long time and we need to clean them manually… the interface is slow to update after changes.\" ENREACH", col_se: "\"Takes a lot of time to upload results in current portal.\" AMBEA", col_proto: "(not applicable since Figma prototype)", col_b2b: "", col_sol: "Server-side pagination, optimistic UI updates, background processing for exports", col_exp: "Performance benchmark: measure load times before/after optimization sprint" } },
-      { id: "row_5", cells: { col_opp: "Role-Based Admin Access and Delegation", col_rprio: "5", col_iprio: "Next", col_obj: "Support compliance and decentralized admin management", col_about: "Introduce granular roles for assistants or department-level admins to manage only their scope (e.g., assigned cost centers).", col_impact: "High for compliance and decentralization, especially in large enterprises.", col_dk: "\"We have a lot of users with same role but all have full access; would be nice to limit depending on task.\" ENREACH", col_se: "\"High priority… allow admin access per cost centre.\" INVESTOR", col_proto: "(not applicable since Admin design was not part of prototype design)", col_b2b: "", col_sol: "Role-based permission matrix with scope-limited admin accounts", col_exp: "Co-design workshop with 2 enterprise IT admins on permission model" } },
-      { id: "row_6", cells: { col_opp: "Real-Time Usage & Cost Overviews", col_rprio: "6", col_iprio: "Next", col_obj: "Enable proactive cost control without manual data gathering", col_about: "Provide dashboard widgets showing:\n• Current spend vs. budget\n• Roaming activity alerts\n• High-data user highlights", col_impact: "High for cost control and proactive management.", col_dk: "\"Would be useful to handle roaming or extra data without going into files manually; now we have to look up most files in Excel to see data packages.\" ENREACH", col_se: "\"It would be nice to have alerts when a user has excessive usage abroad.\" BICO", col_proto: "", col_b2b: "", col_sol: "Dashboard with spend/budget widget, roaming alert cards, top-consumer list", col_exp: "Usage alert email mockup: test with 10 admins if threshold notifications reduce manual checks" } },
-      { id: "row_7", cells: { col_opp: "Reliable Activity History / Change Logs", col_rprio: "7", col_iprio: "Next", col_obj: "Provide full audit trail for multi-admin accountability", col_about: "Display who did what and when for accountability across multiple admins.", col_impact: "Critical for compliance in enterprise accounts.", col_dk: "\"Sometimes we need to know what date the subscription changed to another plan or who did it.\" ENREACH\n\n\"Multiple admins in some orgs need transparency.\" CARLA", col_se: "\"Where do I see what others changed? Doesn't seem here yet.\" CARLA\n\n\"Audit trail—will that be added? Important when multiple admins exist.\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Timestamped activity feed per subscription with admin identity and change details", col_exp: "Fake-door test: add 'View history' button and measure click rate" } },
-      { id: "row_8", cells: { col_opp: "Customizable Table Views and Column Management", col_rprio: "8", col_iprio: "Next", col_obj: "Improve efficiency for power users with personalized layouts", col_about: "Allow admins to choose columns, pin data, and save custom list layouts for faster scanning and task execution.", col_impact: "Medium – improves efficiency for experienced users.", col_dk: "\"We can't make an extract on a single customer, then we need to do it for all and clean manually.\"\n\n\"There's a manual input to the spreadsheet because filters are missing.\" ENREACH", col_se: "Limited mention, but frustration: \"You have to click into details for info, would be better in overview.\" CARLA", col_proto: "Positive reaction: \"Being able to customize columns or what you see is good, but is that possible here?\" (Carla).", col_b2b: "", col_sol: "Column picker, saved view presets, drag-to-reorder columns", col_exp: "Prototype: let 5 admins configure their ideal list view, compare task speed" } },
-      { id: "row_9", cells: { col_opp: "Intelligent Export & Reporting Experience", col_rprio: "9", col_iprio: "Later", col_obj: "Reduce manual data cleanup for finance and audits", col_about: "Offer filtered CSV/PDF export for selected entities, avoiding full-database dumps and manual cleanup.", col_impact: "Medium – recurring pain for finance audits and customer reports.", col_dk: "", col_se: "\"We need to download invoices and usage data multiple times, then move it into Oracle for approval.\" FEDEX", col_proto: "\"Will there be export by selection? That's critical.\" ENREACH", col_b2b: "", col_sol: "Filtered export with column/row selection + scheduled report generation", col_exp: "Concierge test: manually generate filtered exports for 3 admins, measure satisfaction" } },
-      { id: "row_10", cells: { col_opp: "Clearer Interaction Copy & Structure", col_rprio: "10", col_iprio: "Later", col_obj: "Reduce cognitive load and error rates during common flows", col_about: "Reduce cognitive load with better labels, fewer modal layers, and predictable flows:\n• Replace vague buttons (e.g., \"See details\") with descriptive actions\n• Remove redundant confirmations", col_impact: "Medium – improves learnability and error resilience.", col_dk: "\"It would be nice to filter by company first instead of all this scrolling… better overview by accounts.\" ENREACH", col_se: "\"Now I have to scroll down and click 'see details'; before it was clearer.\" CARLA\n\n\"I need to find the company and then the cost centre to find a number.\" AMBEA", col_proto: "CARLA: \"This looks simpler, less steps, feels more logical.\"", col_b2b: "", col_sol: "UX copy audit + action-oriented button labels + progressive disclosure", col_exp: "5-second test: old vs. new button labels—measure comprehension rate" } },
-      { id: "row_11", cells: { col_opp: "Alignment with Admin Mental Models", col_rprio: "11", col_iprio: "Next", col_obj: "Reduce task fragmentation by matching admin workflow patterns", col_about: "Restructure navigation and grouping of features to match admin workflows, not internal system logic:\n• Onboarding hub (create > assign > approve)\n• Cost control hub (monitor > report > export)", col_impact: "High – reduces task fragmentation.", col_dk: "\"Need option to choose between different companies at start… so we don't scroll everything.\" ENREACH", col_se: "\"Friction exists when admins shift between screens for related tasks.\" AMBEA", col_proto: "\"I think we need to have something when we can choose between different companies… accounts.\"\n→ Expected account-selection step earlier in flow.", col_b2b: "", col_sol: "Task-based navigation hubs (Onboarding, Cost control, Support) vs. entity-based", col_exp: "Card sort with 8 admins: validate navigation groupings match mental models" } },
-      { id: "row_12", cells: { col_opp: "Mobile-Responsive Interface for Emergency Tasks", col_rprio: "12", col_iprio: "Later", col_obj: "Enable critical actions without desktop dependency", col_about: "Enable simplified mobile interactions for critical tasks (SIM unlock, PIN lookup) without requiring full desktop workflows.", col_impact: "Medium – supports business continuity.", col_dk: "\"Sometimes we need to check details quickly – would be useful if possible without PC.\" ENREACH", col_se: "\"If I'm away from laptop, I'd log in quickly to check SIM code, but not for full orders.\" CARLA", col_proto: "No mobile version was shown; expectation raised for quick PIN view if needed.", col_b2b: "", col_sol: "Mobile-optimized emergency actions: SIM unlock, PIN view, quick status check", col_exp: "Diary study: ask 5 admins to log mobile needs for 2 weeks" } },
-      { id: "row_13", cells: { col_opp: "Compliance-First Authentication Experience", col_rprio: "13", col_iprio: "Later", col_obj: "Balance security compliance with login friction", col_about: "Maintain flexibility for MFA and BankID but support secure session timeouts and SSO for enterprise admins.\n\nMixed preferences for login (BankID vs credentials vs mid-ID) across markets.", col_impact: "Medium – trust and security adherence.", col_dk: "\"We use email and password… would two-factor be an option?\" ENREACH\n\n\"In Denmark it's all multifactor… using MitID in company tools.\" FEDEX", col_se: "\"I have BankID set up, I could use that, but usually use saved credentials because it's faster.\" CARLA", col_proto: "\"Will MFA and SSO be supported? Enterprise users expect both.\"", col_b2b: "", col_sol: "SSO + configurable MFA (BankID, MitID, TOTP) with admin-set session policies", col_exp: "Survey: collect MFA preferences from 20 admins across DK/SE markets" } },
-      { id: "row_14", cells: { col_opp: "Explainability & Transparency on Changes", col_rprio: "14", col_iprio: "Later", col_obj: "Prevent migration frustration through proactive communication", col_about: "Whenever UI redesign adds steps or alters hierarchy, communicate 'why' upfront, provide in-context tips.\n\nEvidence: Update complaints from existing users.", col_impact: "High – prevents frustration during migration.", col_dk: "(not redesigned recently so does not apply)", col_se: "\"So this functions differently now, but what happened to the old shortcuts?\" ENREACH\n\n\"Multiple users asked: 'Where do we find X now?' No in-line tips or explanation during new flow demo.\"", col_proto: "", col_b2b: "", col_sol: "In-context onboarding tips + 'What changed' changelog panel on login", col_exp: "Before/after test: measure support ticket volume with vs. without changelog" } },
+      { id: "row_1", cells: { col_opp: "One-Step Access to Core Information", col_rprio: "1", col_iprio: "", col_obj: "Reduce task completion time for daily admin workflows", col_about: "Eliminate unnecessary drill-down levels for subscription details; surface all relevant info (user name, number, plan, SIM status) in the first view.", col_impact: "High – affects daily repetitive tasks such as name changes and plan checks.", col_dk: "\"It would be nice to have subscription details visible immediately instead of hunting through layers.\" ENREACH\n\n\"Previously, I could see everything directly; now I have to scroll and click 'see details.'\" CARLA", col_se: "\"This looks simpler, less steps, feels more logical.\" CARLA\n\n\"Easier to see things in one place now, but still not all details I'd expect—where do I find start date?\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Flat subscription detail view with all key info visible on first load", col_exp: "A/B test: collapsed vs. expanded default view" } },
+      { id: "row_2", cells: { col_opp: "Universal Search with Smart Filters", col_rprio: "2", col_iprio: "", col_obj: "Reduce time-to-find for subscription lookups", col_about: "Enable a global search bar that retrieves subscriptions by number, name, or account across all cost centers without pre-navigation.", col_impact: "High – reduces wasted time when responding to end-user requests.", col_dk: "\"We need to search quickly; now have to click into accounts before searching.\" ENREACH\n\n\"I now need to find the company and then the cost centre to find a number.\" AMBEA", col_se: "\"Where do I search across everything? I can't see a global search bar.\" ENREACH\n\n\"So, how do I find a person if I don't want to click around?\" CARLA", col_proto: "", col_b2b: "", col_sol: "Global search bar with cross-entity results + filter chips for type/account/status", col_exp: "Prototype test with 5 admins: measure lookup time vs. current flow" } },
+      { id: "row_3", cells: { col_opp: "Bulk Operations for High-Volume Tasks", col_rprio: "3", col_iprio: "", col_obj: "Enable efficient onboarding/offboarding at scale", col_about: "Provide bulk create/edit/delete flows for actions like:\n• Activating multiple SIMs\n• Owner/name changes\n• Moving numbers between accounts", col_impact: "Critical during onboarding/offboarding waves.", col_dk: "\"We miss being able to both create and change several at once.\" ENREACH", col_se: "\"It makes more sense to just order stuff as the orders come in… would be different if we could bulk handle hardware through the portal.\" CARLA", col_proto: "\"This would save time if I can select multiple numbers, but can I? Doesn't look like it yet.\"\n\n\"We miss bulk change—do you plan to add it here?\"", col_b2b: "", col_sol: "Multi-select + batch action bar for common operations (activate, change owner, move)", col_exp: "Wizard prototype for bulk SIM activation with 3 enterprise admins" } },
+      { id: "row_4", cells: { col_opp: "Real-Time Performance and System Response", col_rprio: "4", col_iprio: "", col_obj: "Ensure sub-2s response times for all portal operations", col_about: "Reduce page reload times, optimize database queries, and enable inline actions without full-page refresh.", col_impact: "High – persistent load delays slow down every task.", col_dk: "\"When we make extracts, it takes a long time and we need to clean them manually… the interface is slow to update after changes.\" ENREACH", col_se: "\"Takes a lot of time to upload results in current portal.\" AMBEA", col_proto: "(not applicable since Figma prototype)", col_b2b: "", col_sol: "Server-side pagination, optimistic UI updates, background processing for exports", col_exp: "Performance benchmark: measure load times before/after optimization sprint" } },
+      { id: "row_5", cells: { col_opp: "Role-Based Admin Access and Delegation", col_rprio: "5", col_iprio: "", col_obj: "Support compliance and decentralized admin management", col_about: "Introduce granular roles for assistants or department-level admins to manage only their scope (e.g., assigned cost centers).", col_impact: "High for compliance and decentralization, especially in large enterprises.", col_dk: "\"We have a lot of users with same role but all have full access; would be nice to limit depending on task.\" ENREACH", col_se: "\"High priority… allow admin access per cost centre.\" INVESTOR", col_proto: "(not applicable since Admin design was not part of prototype design)", col_b2b: "", col_sol: "Role-based permission matrix with scope-limited admin accounts", col_exp: "Co-design workshop with 2 enterprise IT admins on permission model" } },
+      { id: "row_6", cells: { col_opp: "Real-Time Usage & Cost Overviews", col_rprio: "6", col_iprio: "", col_obj: "Enable proactive cost control without manual data gathering", col_about: "Provide dashboard widgets showing:\n• Current spend vs. budget\n• Roaming activity alerts\n• High-data user highlights", col_impact: "High for cost control and proactive management.", col_dk: "\"Would be useful to handle roaming or extra data without going into files manually; now we have to look up most files in Excel to see data packages.\" ENREACH", col_se: "\"It would be nice to have alerts when a user has excessive usage abroad.\" BICO", col_proto: "", col_b2b: "", col_sol: "Dashboard with spend/budget widget, roaming alert cards, top-consumer list", col_exp: "Usage alert email mockup: test with 10 admins if threshold notifications reduce manual checks" } },
+      { id: "row_7", cells: { col_opp: "Reliable Activity History / Change Logs", col_rprio: "7", col_iprio: "", col_obj: "Provide full audit trail for multi-admin accountability", col_about: "Display who did what and when for accountability across multiple admins.", col_impact: "Critical for compliance in enterprise accounts.", col_dk: "\"Sometimes we need to know what date the subscription changed to another plan or who did it.\" ENREACH\n\n\"Multiple admins in some orgs need transparency.\" CARLA", col_se: "\"Where do I see what others changed? Doesn't seem here yet.\" CARLA\n\n\"Audit trail—will that be added? Important when multiple admins exist.\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Timestamped activity feed per subscription with admin identity and change details", col_exp: "Fake-door test: add 'View history' button and measure click rate" } },
+      { id: "row_8", cells: { col_opp: "Customizable Table Views and Column Management", col_rprio: "8", col_iprio: "", col_obj: "Improve efficiency for power users with personalized layouts", col_about: "Allow admins to choose columns, pin data, and save custom list layouts for faster scanning and task execution.", col_impact: "Medium – improves efficiency for experienced users.", col_dk: "\"We can't make an extract on a single customer, then we need to do it for all and clean manually.\"\n\n\"There's a manual input to the spreadsheet because filters are missing.\" ENREACH", col_se: "Limited mention, but frustration: \"You have to click into details for info, would be better in overview.\" CARLA", col_proto: "Positive reaction: \"Being able to customize columns or what you see is good, but is that possible here?\" (Carla).", col_b2b: "", col_sol: "Column picker, saved view presets, drag-to-reorder columns", col_exp: "Prototype: let 5 admins configure their ideal list view, compare task speed" } },
+      { id: "row_9", cells: { col_opp: "Intelligent Export & Reporting Experience", col_rprio: "9", col_iprio: "", col_obj: "Reduce manual data cleanup for finance and audits", col_about: "Offer filtered CSV/PDF export for selected entities, avoiding full-database dumps and manual cleanup.", col_impact: "Medium – recurring pain for finance audits and customer reports.", col_dk: "", col_se: "\"We need to download invoices and usage data multiple times, then move it into Oracle for approval.\" FEDEX", col_proto: "\"Will there be export by selection? That's critical.\" ENREACH", col_b2b: "", col_sol: "Filtered export with column/row selection + scheduled report generation", col_exp: "Concierge test: manually generate filtered exports for 3 admins, measure satisfaction" } },
+      { id: "row_10", cells: { col_opp: "Clearer Interaction Copy & Structure", col_rprio: "10", col_iprio: "", col_obj: "Reduce cognitive load and error rates during common flows", col_about: "Reduce cognitive load with better labels, fewer modal layers, and predictable flows:\n• Replace vague buttons (e.g., \"See details\") with descriptive actions\n• Remove redundant confirmations", col_impact: "Medium – improves learnability and error resilience.", col_dk: "\"It would be nice to filter by company first instead of all this scrolling… better overview by accounts.\" ENREACH", col_se: "\"Now I have to scroll down and click 'see details'; before it was clearer.\" CARLA\n\n\"I need to find the company and then the cost centre to find a number.\" AMBEA", col_proto: "CARLA: \"This looks simpler, less steps, feels more logical.\"", col_b2b: "", col_sol: "UX copy audit + action-oriented button labels + progressive disclosure", col_exp: "5-second test: old vs. new button labels—measure comprehension rate" } },
+      { id: "row_11", cells: { col_opp: "Alignment with Admin Mental Models", col_rprio: "11", col_iprio: "", col_obj: "Reduce task fragmentation by matching admin workflow patterns", col_about: "Restructure navigation and grouping of features to match admin workflows, not internal system logic:\n• Onboarding hub (create > assign > approve)\n• Cost control hub (monitor > report > export)", col_impact: "High – reduces task fragmentation.", col_dk: "\"Need option to choose between different companies at start… so we don't scroll everything.\" ENREACH", col_se: "\"Friction exists when admins shift between screens for related tasks.\" AMBEA", col_proto: "\"I think we need to have something when we can choose between different companies… accounts.\"\n→ Expected account-selection step earlier in flow.", col_b2b: "", col_sol: "Task-based navigation hubs (Onboarding, Cost control, Support) vs. entity-based", col_exp: "Card sort with 8 admins: validate navigation groupings match mental models" } },
+      { id: "row_12", cells: { col_opp: "Mobile-Responsive Interface for Emergency Tasks", col_rprio: "12", col_iprio: "", col_obj: "Enable critical actions without desktop dependency", col_about: "Enable simplified mobile interactions for critical tasks (SIM unlock, PIN lookup) without requiring full desktop workflows.", col_impact: "Medium – supports business continuity.", col_dk: "\"Sometimes we need to check details quickly – would be useful if possible without PC.\" ENREACH", col_se: "\"If I'm away from laptop, I'd log in quickly to check SIM code, but not for full orders.\" CARLA", col_proto: "No mobile version was shown; expectation raised for quick PIN view if needed.", col_b2b: "", col_sol: "Mobile-optimized emergency actions: SIM unlock, PIN view, quick status check", col_exp: "Diary study: ask 5 admins to log mobile needs for 2 weeks" } },
+      { id: "row_13", cells: { col_opp: "Compliance-First Authentication Experience", col_rprio: "13", col_iprio: "", col_obj: "Balance security compliance with login friction", col_about: "Maintain flexibility for MFA and BankID but support secure session timeouts and SSO for enterprise admins.\n\nMixed preferences for login (BankID vs credentials vs mid-ID) across markets.", col_impact: "Medium – trust and security adherence.", col_dk: "\"We use email and password… would two-factor be an option?\" ENREACH\n\n\"In Denmark it's all multifactor… using MitID in company tools.\" FEDEX", col_se: "\"I have BankID set up, I could use that, but usually use saved credentials because it's faster.\" CARLA", col_proto: "\"Will MFA and SSO be supported? Enterprise users expect both.\"", col_b2b: "", col_sol: "SSO + configurable MFA (BankID, MitID, TOTP) with admin-set session policies", col_exp: "Survey: collect MFA preferences from 20 admins across DK/SE markets" } },
+      { id: "row_14", cells: { col_opp: "Explainability & Transparency on Changes", col_rprio: "14", col_iprio: "", col_obj: "Prevent migration frustration through proactive communication", col_about: "Whenever UI redesign adds steps or alters hierarchy, communicate 'why' upfront, provide in-context tips.\n\nEvidence: Update complaints from existing users.", col_impact: "High – prevents frustration during migration.", col_dk: "(not redesigned recently so does not apply)", col_se: "\"So this functions differently now, but what happened to the old shortcuts?\" ENREACH\n\n\"Multiple users asked: 'Where do we find X now?' No in-line tips or explanation during new flow demo.\"", col_proto: "", col_b2b: "", col_sol: "In-context onboarding tips + 'What changed' changelog panel on login", col_exp: "Before/after test: measure support ticket volume with vs. without changelog" } },
     ]
   };
 
   const updateData = (updates) => { onChange({ ...tableData, ...updates }); };
+
+  // Persist default data on first mount so OST sync can access it
+  useEffect(() => {
+    if (!data || !data.rows || data.rows.length === 0) {
+      onChange(tableData);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const addRow = () => {
     const newRow = { id: generateId(), cells: tableData.columns.reduce((acc, col) => ({ ...acc, [col.id]: "" }), {}) };
     updateData({ rows: [...tableData.rows, newRow] });
@@ -5057,12 +5070,14 @@ const DiscoveryTableSection = ({ data, onChange }) => {
         </div>
       ) : (
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-          <table ref={tableRef} className="w-full" style={{ tableLayout: Object.keys(columnWidths).length > 0 ? 'fixed' : 'auto' }}>
+          <table ref={tableRef} className="w-full" style={{ tableLayout: 'fixed' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
-              {visibleColumns.map((col) => (
-                <col key={col.id} style={columnWidths[col.id] ? { width: columnWidths[col.id] + 'px' } : {}} />
-              ))}
+              {visibleColumns.map((col) => {
+                const minWidths = { col_opp: 180, col_rprio: 80, col_iprio: 80, col_obj: 160, col_about: 180, col_impact: 140, col_dk: 160, col_se: 160, col_proto: 140, col_b2b: 140, col_sol: 180, col_exp: 180 };
+                const w = columnWidths[col.id] || minWidths[col.id] || 140;
+                return <col key={col.id} style={{ width: w + 'px', minWidth: (minWidths[col.id] || 140) + 'px' }} />;
+              })}
               <col style={{ width: '40px' }} />
             </colgroup>
             <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
@@ -5073,13 +5088,24 @@ const DiscoveryTableSection = ({ data, onChange }) => {
                 <th className="px-2 py-1.5 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700" colSpan={1}>Objectives</th>
                 <th className="px-2 py-1.5 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700" colSpan={2}>Analysis</th>
                 <th className="px-2 py-1.5 text-left text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border-l border-slate-200 dark:border-slate-700" colSpan={4}>Evidence</th>
-                <th className="px-2 py-1.5 text-left text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-l border-slate-200 dark:border-slate-700" colSpan={2}>Going forward</th>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-l border-slate-200 dark:border-slate-700" colSpan={2}>
+                  <div className="flex items-center gap-2">
+                    <span>Going forward</span>
+                    <button
+                      onClick={() => setShowAiSuggestions(!showAiSuggestions)}
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium rounded-sm transition-colors cursor-pointer ${showAiSuggestions ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400'}`}
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5l-4 3.5 1.5 5L8 11.5 3.5 14.5 5 9.5 1 6h5L8 1z"/></svg>
+                      AI {showAiSuggestions ? 'on' : 'off'}
+                    </button>
+                  </div>
+                </th>
                 <th className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800"></th>
               </tr>
               <tr>
                 <th className="px-2 py-2 text-left bg-slate-50 dark:bg-slate-800"></th>
                 {visibleColumns.map((col) => (
-                  <th key={col.id} className="px-2 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 relative group">
+                  <th key={col.id} className="px-2 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 relative group" title={col.name}>
                     <span className="truncate block pr-2">{col.name}</span>
                     <div onMouseDown={(e) => handleResizeStart(e, col.id)} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400/50 group-hover:bg-slate-300/50 dark:group-hover:bg-slate-600/50" />
                   </th>
@@ -5099,15 +5125,48 @@ const DiscoveryTableSection = ({ data, onChange }) => {
                       col.id === "col_opp" ? "bg-amber-50/40 dark:bg-amber-900/10" :
                       (col.id === "col_dk" || col.id === "col_se" || col.id === "col_proto" || col.id === "col_b2b") ? "bg-purple-50/40 dark:bg-purple-900/10" :
                       (col.id === "col_sol" || col.id === "col_exp") ? "bg-emerald-50/40 dark:bg-emerald-900/10" : "";
+                    const isAiColumn = col.id === "col_sol" || col.id === "col_exp";
+                    const cellValue = row.cells[col.id] || "";
+                    const teamKey = col.id + "_team";
+                    const teamValue = row.cells[teamKey] || "";
                     return (
                       <td key={col.id} className={`px-2 py-1 border-l border-slate-200 dark:border-slate-700 align-top ${sectionBg}`}>
-                        <textarea
-                          value={row.cells[col.id] || ""}
-                          onChange={(e) => { updateCell(row.id, col.id, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                          ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-                          className={`w-full px-1 py-1 text-xs border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 rounded resize-none overflow-hidden ${col.id === "col_opp" ? "font-bold" : ""}`}
-                          placeholder=""
-                        />
+                        {isAiColumn ? (
+                          <div className="flex flex-col gap-1.5">
+                            {showAiSuggestions && (
+                              <div>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-sm mb-0.5">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5l-4 3.5 1.5 5L8 11.5 3.5 14.5 5 9.5 1 6h5L8 1z"/></svg>
+                                  AI suggestion
+                                </span>
+                                <textarea
+                                  value={cellValue}
+                                  onChange={(e) => { updateCell(row.id, col.id, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                                  ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                                  className="w-full px-1 py-1 text-xs border-none bg-transparent text-slate-500 dark:text-slate-400 italic focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-600 rounded resize-none overflow-hidden"
+                                  placeholder="AI suggestion..."
+                                />
+                              </div>
+                            )}
+                            <div className={showAiSuggestions ? "border-t border-slate-200 dark:border-slate-600 pt-1.5" : ""}>
+                              <textarea
+                                value={teamValue}
+                                onChange={(e) => { updateCell(row.id, teamKey, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                                ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                                className="w-full px-1 py-1 text-xs border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-600 rounded resize-none overflow-hidden"
+                                placeholder=""
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <textarea
+                            value={cellValue}
+                            onChange={(e) => { updateCell(row.id, col.id, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                            ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                            className={`w-full px-1 py-1 text-xs border-none bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 rounded resize-none overflow-hidden ${col.id === "col_opp" ? "font-bold" : ""}`}
+                            placeholder=""
+                          />
+                        )}
                       </td>
                     );
                   })}
@@ -5357,6 +5416,62 @@ export default function RequirementAnalyzer() {
     },
     [activeId]
   );
+
+  // Sync discovery table opportunities → OST canvas
+  const syncTableToOST = useCallback((tableData) => {
+    if (!tableData || !tableData.rows) return;
+
+    setAnalyses((prev) =>
+      prev.map((a) => {
+        if (a.id !== activeId) return a;
+
+        const currentTree = a.opportunityTree || { outcome: { id: "outcome", text: "Desired Outcome" }, opportunities: [] };
+        const existingOpps = currentTree.opportunities || [];
+
+        // Build map of existing opportunities by their source row ID
+        const existingByRowId = {};
+        existingOpps.forEach((opp) => {
+          if (opp.sourceRowId) existingByRowId[opp.sourceRowId] = opp;
+        });
+
+        // Create/update opportunities from table rows
+        const newOpps = tableData.rows.map((row) => {
+          const oppName = row.cells?.col_opp || "Untitled Opportunity";
+          const existing = existingByRowId[row.id];
+          if (existing) {
+            // Update text, preserve solutions/experiments
+            return { ...existing, text: oppName };
+          } else {
+            // New opportunity linked to this row
+            return {
+              id: row.id.replace("row_", "opp_"),
+              sourceRowId: row.id,
+              text: oppName,
+              solutions: [],
+            };
+          }
+        });
+
+        const newTree = { ...currentTree, opportunities: newOpps };
+        delete newTree.positions; // Will be recalculated on canvas open
+
+        return { ...a, opportunityTree: newTree, updatedAt: new Date().toISOString() };
+      })
+    );
+  }, [activeId]);
+
+  // Initial sync: populate OST from table data if OST has no opportunities yet
+  useEffect(() => {
+    if (!dataLoaded || !active) return;
+    const table = active.discoveryTable;
+    const tree = active.opportunityTree;
+    // Only sync if table has rows and OST has no opportunities (or no tree at all)
+    if (table && table.rows && table.rows.length > 0) {
+      if (!tree || !tree.opportunities || tree.opportunities.length === 0) {
+        syncTableToOST(table);
+      }
+    }
+  }, [activeId, dataLoaded]); // Run after data loads or analysis switch
 
   // --- AI Chat ---
   const sendChatMessage = useCallback(async (userMessage) => {
@@ -6732,8 +6847,10 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       case "wireframe": return <WireframeSection data={active.wireframe || { iaSteps: [] }} analysis={active} language={lang} githubAIKey={githubAIKey} onChange={(v) => updateActive("wireframe", v)} />;
       case "summary": return <SummarySection data={active.summary} language={lang} analysis={active} onChange={(v) => updateActive("summary", v)} onGenerateAIBrief={() => handleGenerateAIBrief()} />;
       // Discovery mode sections
-      case "discoveryTable": return <DiscoveryTableSection data={active.discoveryTable} onChange={(v) => updateActive("discoveryTable", v)} />;
+      case "discoveryTable": return <DiscoveryTableSection data={active.discoveryTable} onChange={(v) => { updateActive("discoveryTable", v); syncTableToOST(v); }} />;
       case "opportunityTree": return <OSTCanvas data={active.opportunityTree} onChange={(v) => updateActive("opportunityTree", v)} />;
+      case "sourceDocuments": return <DocumentsSection />;
+      case "feedback": return <FeedbackSection />;
       default: return null;
     }
   };
@@ -6857,12 +6974,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {/* Sidebar */}
       {sidebarOpen && (
         <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
-          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-700">
-            <div>
-              <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Design task manager</h1>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Structured documentation & AI brief generation</p>
-            </div>
-          </div>
 
           {/* Phase filter */}
           <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
@@ -7049,8 +7160,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeSection === "opportunityTree" ? (
-          <div className="h-full">{renderSection()}</div>
+        {activeSection === "opportunityTree" || activeSection === "sourceDocuments" || activeSection === "feedback" ? (
+          <div className="h-full p-6">{renderSection()}</div>
         ) : (
           <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-6 py-8" : "max-w-2xl mx-auto px-6 py-8"}>
             {renderSection()}

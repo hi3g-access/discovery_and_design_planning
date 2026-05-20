@@ -1,0 +1,10 @@
+[
+  { "id": "dk-enreach", "filename": "DK - Enreach-en-US.docx", "company": "Enreach", "market": "DK", "label": "DK — Enreach" },
+  { "id": "dk-jettime", "filename": "DK - Jettime-en-US.docx", "company": "Jettime", "market": "DK", "label": "DK — Jettime" },
+  { "id": "dk-visma", "filename": "DK - Visma-en-US.docx", "company": "Visma", "market": "DK", "label": "DK — Visma" },
+  { "id": "se-ambea", "filename": "SE - Ambea-en-US.docx", "company": "Ambea", "market": "SE", "label": "SE — Ambea" },
+  { "id": "se-bico", "filename": "SE - Bico-en-US.docx", "company": "Bico", "market": "SE", "label": "SE — Bico" },
+  { "id": "se-carla", "filename": "SE - Carla-en-US.docx", "company": "Carla", "market": "SE", "label": "SE — Carla" },
+  { "id": "se-fedex", "filename": "SE - FedEx-en-US.docx", "company": "FedEx", "market": "SE", "label": "SE — FedEx" },
+  { "id": "se-investor", "filename": "SE - Investor-en-US.docx", "company": "Investor", "market": "SE", "label": "SE — Investor" }
+]

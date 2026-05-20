@@ -5,7 +5,7 @@ import { Tldraw, createShapeId, DefaultColorStyle, toRichText, renderPlaintextFr
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 80;
 const HORIZONTAL_GAP = 40;
-const VERTICAL_GAP = 120;
+const VERTICAL_GAP = 200;
 
 // Color mapping for node types
 const NODE_COLORS = {
@@ -70,7 +70,7 @@ function treeDataToShapes(treeData, positions) {
       meta: { nodeType: "opportunity", nodeId: opp.id },
     });
 
-    // Arrow from outcome to opportunity
+    // Arrow from outcome to opportunity — all start from center-bottom to form a shared trunk
     const arrowId = createShapeId(`arrow-${treeData.outcome.id}-${opp.id}`);
     shapes.push({
       id: arrowId,
@@ -78,15 +78,20 @@ function treeDataToShapes(treeData, positions) {
       x: 0,
       y: 0,
       props: {
+        kind: "elbow",
         color: "grey",
         size: "s",
+        bend: 0,
+        elbowMidPoint: 0.5,
+        arrowheadStart: "none",
+        arrowheadEnd: "arrow",
         start: { x: 0, y: 0 },
         end: { x: 0, y: 0 },
       },
     });
     bindings.push(
-      { fromId: arrowId, toId: outcomeId, type: "arrow", props: { terminal: "start", normalizedAnchor: { x: 0.5, y: 1 }, isExact: false, isPrecise: false } },
-      { fromId: arrowId, toId: oppId, type: "arrow", props: { terminal: "end", normalizedAnchor: { x: 0.5, y: 0 }, isExact: false, isPrecise: false } }
+      { fromId: arrowId, toId: outcomeId, type: "arrow", props: { terminal: "start", normalizedAnchor: { x: 0.5, y: 1 }, isExact: true, isPrecise: true } },
+      { fromId: arrowId, toId: oppId, type: "arrow", props: { terminal: "end", normalizedAnchor: { x: 0.5, y: 0 }, isExact: true, isPrecise: true } }
     );
 
     // Solutions
@@ -120,8 +125,13 @@ function treeDataToShapes(treeData, positions) {
         x: 0,
         y: 0,
         props: {
+          kind: "elbow",
           color: "grey",
           size: "s",
+          bend: 0,
+          elbowMidPoint: 0.5,
+          arrowheadStart: "none",
+          arrowheadEnd: "arrow",
           start: { x: 0, y: 0 },
           end: { x: 0, y: 0 },
         },
@@ -162,8 +172,13 @@ function treeDataToShapes(treeData, positions) {
           x: 0,
           y: 0,
           props: {
+            kind: "elbow",
             color: "grey",
             size: "s",
+            bend: 0,
+            elbowMidPoint: 0.5,
+            arrowheadStart: "none",
+            arrowheadEnd: "arrow",
             start: { x: 0, y: 0 },
             end: { x: 0, y: 0 },
           },
@@ -282,9 +297,41 @@ function genId() {
   return Math.random().toString(36).substring(2, 10);
 }
 
+// Get all node IDs belonging to an opportunity's chain (including outcome)
+function getChainNodeIds(opportunityId, treeData) {
+  const ids = new Set();
+  ids.add(treeData.outcome.id);
+  ids.add(opportunityId);
+
+  const opp = (treeData.opportunities || []).find((o) => o.id === opportunityId);
+  if (opp) {
+    (opp.solutions || []).forEach((sol) => {
+      ids.add(sol.id);
+      (sol.experiments || []).forEach((exp) => {
+        ids.add(exp.id);
+      });
+    });
+  }
+  return ids;
+}
+
+// Get the opportunity ID that a node belongs to
+function getOpportunityForNode(shape, treeData) {
+  if (!shape?.meta) return null;
+  const { nodeType, nodeId, parentId, grandParentId } = shape.meta;
+  if (nodeType === "opportunity") return nodeId;
+  if (nodeType === "solution") return parentId;
+  if (nodeType === "experiment") return grandParentId;
+  if (nodeType === "outcome") return null;
+  return null;
+}
+
 export default function OSTCanvas({ data, onChange }) {
   const editorRef = useRef(null);
   const [initialized, setInitialized] = useState(false);
+  const [focusedOpportunityId, setFocusedOpportunityId] = useState(null);
+  const focusedRef = useRef(null);
+  focusedRef.current = focusedOpportunityId;
 
   const treeData = data || {
     outcome: { id: "outcome", text: "Desired Outcome" },
@@ -325,6 +372,66 @@ export default function OSTCanvas({ data, onChange }) {
 
     setInitialized(true);
 
+    // Click handler for chain focus
+    const handlePointerUp = (info) => {
+      // Small delay to let tldraw process the click first
+      setTimeout(() => {
+        const selectedShapes = editor.getSelectedShapes();
+        const clickedShape = selectedShapes.length === 1 ? selectedShapes[0] : null;
+
+        if (!clickedShape || clickedShape.type !== "geo" || !clickedShape.meta?.nodeType) {
+          // Clicked empty canvas or non-node — clear focus
+          if (focusedRef.current) {
+            setFocusedOpportunityId(null);
+            focusedRef.current = null;
+            applyFocusOpacity(editor, null);
+          }
+          return;
+        }
+
+        const { nodeType } = clickedShape.meta;
+
+        if (nodeType === "opportunity") {
+          const clickedId = clickedShape.meta.nodeId;
+          if (focusedRef.current === clickedId) {
+            // Toggle off
+            setFocusedOpportunityId(null);
+            focusedRef.current = null;
+            applyFocusOpacity(editor, null);
+          } else {
+            // Focus this chain
+            const chainIds = getChainNodeIds(clickedId, dataRef.current);
+            setFocusedOpportunityId(clickedId);
+            focusedRef.current = clickedId;
+            applyFocusOpacity(editor, chainIds);
+          }
+        } else if (nodeType === "outcome") {
+          // Clicking outcome clears focus
+          if (focusedRef.current) {
+            setFocusedOpportunityId(null);
+            focusedRef.current = null;
+            applyFocusOpacity(editor, null);
+          }
+        } else {
+          // Clicked a solution or experiment — focus its parent opportunity chain
+          const oppId = getOpportunityForNode(clickedShape, dataRef.current);
+          if (oppId && oppId !== focusedRef.current) {
+            const chainIds = getChainNodeIds(oppId, dataRef.current);
+            setFocusedOpportunityId(oppId);
+            focusedRef.current = oppId;
+            applyFocusOpacity(editor, chainIds);
+          } else if (oppId && oppId === focusedRef.current) {
+            // Already focused on this chain — toggle off
+            setFocusedOpportunityId(null);
+            focusedRef.current = null;
+            applyFocusOpacity(editor, null);
+          }
+        }
+      }, 50);
+    };
+
+    editor.on("pointer_up", handlePointerUp);
+
     // Listen for shape changes (text edits, moves)
     const handleChange = () => {
       if (!editorRef.current) return;
@@ -352,6 +459,37 @@ export default function OSTCanvas({ data, onChange }) {
 
     editor.sideEffects.registerAfterChangeHandler("shape", debouncedChange);
   }, [onChange]);
+
+  // Sync external data changes (e.g., from discovery table) into the canvas
+  const prevOppCountRef = useRef((treeData.opportunities || []).length);
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !initialized) return;
+
+    const currentOpps = treeData.opportunities || [];
+    const prevCount = prevOppCountRef.current;
+
+    // Detect if opportunities changed externally (count changed or names differ)
+    if (currentOpps.length !== prevCount) {
+      prevOppCountRef.current = currentOpps.length;
+      const positions = calculateLayout(treeData);
+      rebuildCanvas(editor, treeData, positions);
+    } else {
+      // Check if any text changed
+      const allShapes = editor.getCurrentPageShapes();
+      const oppShapes = allShapes.filter(s => s.meta?.nodeType === "opportunity");
+      const needsRebuild = currentOpps.some(opp => {
+        const shape = oppShapes.find(s => s.meta?.nodeId === opp.id);
+        if (!shape) return true;
+        const shapeText = shape.props?.richText ? renderPlaintextFromRichText(editor, shape.props.richText) : "";
+        return shapeText !== opp.text;
+      });
+      if (needsRebuild) {
+        const positions = treeData.positions || calculateLayout(treeData);
+        rebuildCanvas(editor, treeData, positions);
+      }
+    }
+  }, [treeData, initialized]);
 
   // Toolbar actions
   const addOpportunity = () => {
@@ -454,6 +592,48 @@ export default function OSTCanvas({ data, onChange }) {
     rebuildCanvas(editor, newData, positions);
   };
 
+  // Apply opacity to shapes based on focus state
+  const applyFocusOpacity = (editor, chainNodeIds) => {
+    const allShapes = editor.getCurrentPageShapes();
+    const updates = [];
+
+    if (!chainNodeIds) {
+      // Clear focus — restore all to full opacity
+      allShapes.forEach((shape) => {
+        if (shape.opacity !== 1) {
+          updates.push({ id: shape.id, type: shape.type, opacity: 1 });
+        }
+      });
+    } else {
+      // Dim non-focused, highlight focused
+      allShapes.forEach((shape) => {
+        if (shape.type === "geo" && shape.meta?.nodeId) {
+          const inChain = chainNodeIds.has(shape.meta.nodeId);
+          const targetOpacity = inChain ? 1 : 0.2;
+          if (shape.opacity !== targetOpacity) {
+            updates.push({ id: shape.id, type: shape.type, opacity: targetOpacity });
+          }
+        } else if (shape.type === "arrow") {
+          // Check if arrow connects nodes in the chain via bindings
+          const arrowBindings = editor.getBindingsFromShape(shape, "arrow");
+          const connectedNodeIds = arrowBindings.map((b) => {
+            const targetShape = editor.getShape(b.toId);
+            return targetShape?.meta?.nodeId;
+          }).filter(Boolean);
+          const inChain = connectedNodeIds.length > 0 && connectedNodeIds.every((id) => chainNodeIds.has(id));
+          const targetOpacity = inChain ? 1 : 0.2;
+          if (shape.opacity !== targetOpacity) {
+            updates.push({ id: shape.id, type: shape.type, opacity: targetOpacity });
+          }
+        }
+      });
+    }
+
+    if (updates.length > 0) {
+      editor.updateShapes(updates);
+    }
+  };
+
   const rebuildCanvas = (editor, newData, positions) => {
     // Clear all shapes
     const allShapeIds = editor.getCurrentPageShapeIds();
@@ -467,6 +647,18 @@ export default function OSTCanvas({ data, onChange }) {
       editor.createShapes(shapes);
       if (bindings.length > 0) {
         editor.createBindings(bindings);
+      }
+    }
+
+    // Re-apply focus if active
+    if (focusedRef.current) {
+      const oppStillExists = (newData.opportunities || []).some((o) => o.id === focusedRef.current);
+      if (oppStillExists) {
+        const chainIds = getChainNodeIds(focusedRef.current, newData);
+        setTimeout(() => applyFocusOpacity(editor, chainIds), 10);
+      } else {
+        setFocusedOpportunityId(null);
+        focusedRef.current = null;
       }
     }
 
@@ -498,6 +690,18 @@ export default function OSTCanvas({ data, onChange }) {
         >
           + Experiment
         </button>
+        {focusedOpportunityId && (
+          <button
+            onClick={() => {
+              setFocusedOpportunityId(null);
+              focusedRef.current = null;
+              if (editorRef.current) applyFocusOpacity(editorRef.current, null);
+            }}
+            className="px-3 py-1.5 text-xs bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors font-medium"
+          >
+            Clear Focus
+          </button>
+        )}
         <button
           onClick={deleteSelected}
           className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium ml-auto"
@@ -511,6 +715,17 @@ export default function OSTCanvas({ data, onChange }) {
         <Tldraw
           onMount={handleMount}
           inferDarkMode
+          components={{
+            Toolbar: null,
+            StylePanel: null,
+            PageMenu: null,
+            ActionsMenu: null,
+            MainMenu: null,
+            NavigationPanel: null,
+            HelpMenu: null,
+            ZoomMenu: null,
+            Minimap: null,
+          }}
           options={{
             maxPages: 1,
           }}
