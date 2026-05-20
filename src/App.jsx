@@ -394,6 +394,9 @@ const SECTIONS = [
 const DISCOVERY_SECTIONS = [
   { id: "discoveryTable", label: "Discovery Research", icon: "◫" },
   { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◆" },
+];
+
+const DISCOVERY_SECTIONS_RIGHT = [
   { id: "sourceDocuments", label: "Source Documents", icon: "◉" },
   { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
 ];
@@ -6913,8 +6916,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                   onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
                   className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
                     actionsPanelOpen 
-                      ? "text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200" 
-                      : "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500"
+                      ? "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500" 
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
                   }`}
                   title={actionsPanelOpen ? "Close actions panel" : "Open actions panel"}
                 >
@@ -6937,7 +6940,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             </div>
           </div>
           {/* Row 2: Section nav pills */}
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap items-center">
             {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
               const lang = active.language || "en";
               const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
@@ -6965,6 +6968,25 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 </Pill>
               );
             })}
+            {appMode === "discovery" && (
+              <>
+                <div className="ml-auto" />
+                {DISCOVERY_SECTIONS_RIGHT.map((s) => {
+                  const lang = active.language || "en";
+                  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+                  return (
+                    <Pill
+                      key={s.id}
+                      active={activeSection === s.id}
+                      onClick={() => setActiveSection(s.id)}
+                    >
+                      <span className="mr-1 opacity-60">{s.icon}</span>
+                      {t.sections[s.id] || s.label}
+                    </Pill>
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>

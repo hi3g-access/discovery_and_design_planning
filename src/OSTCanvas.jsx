@@ -671,7 +671,22 @@ export default function OSTCanvas({ data, onChange }) {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0">
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-2">OST Canvas</span>
+        <span className="relative group text-xs font-semibold text-slate-500 dark:text-slate-400 mr-2 cursor-help">
+          OST Canvas
+          <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-2">
+              The <strong>Opportunity Solution Tree</strong> is a visual framework by Teresa Torres for continuous product discovery. It maps a desired outcome to opportunities (customer needs), solutions (ideas to address them), and experiments (ways to validate).
+            </p>
+            <a
+              href="https://www.producttalk.org/opportunity-solution-tree/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              Learn more at producttalk.org →
+            </a>
+          </div>
+        </span>
         <button
           onClick={addOpportunity}
           className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium"
