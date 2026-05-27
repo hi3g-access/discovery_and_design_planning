@@ -436,9 +436,10 @@ const EDGE_CASE_ITEMS = [
   { id: "accessibility", label: "Accessibility", hint: "Keyboard nav, screen readers, contrast?" },
 ];
 
-const createBlankAnalysis = (name = "Untitled Design Task") => ({
+const createBlankAnalysis = (name = "Untitled Design Task", projectMode = "design-specs") => ({
   id: generateId(),
   name,
+  projectMode,
   phase: "",
   gistId: "",
   jiraTicket: "",
@@ -5559,10 +5560,12 @@ export default function RequirementAnalyzer() {
   }, [active]);
 
   const filteredAnalyses = useMemo(() => {
-    if (phaseFilter === "All") return analyses;
-    if (phaseFilter === "Untagged") return analyses.filter((a) => !a.phase);
-    return analyses.filter((a) => a.phase === phaseFilter);
-  }, [analyses, phaseFilter]);
+    // Filter by project mode first
+    const modeFiltered = analyses.filter((a) => (a.projectMode || "design-specs") === appMode);
+    if (phaseFilter === "All") return modeFiltered;
+    if (phaseFilter === "Untagged") return modeFiltered.filter((a) => !a.phase);
+    return modeFiltered.filter((a) => a.phase === phaseFilter);
+  }, [analyses, phaseFilter, appMode]);
 
   const updateActive = useCallback(
     (sectionKey, value) => {
@@ -5834,7 +5837,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
   }, [active, updateActive]);
 
   const createNew = () => {
-    const newA = createBlankAnalysis(appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task");
+    const newA = createBlankAnalysis(appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task", appMode);
     setAnalyses((prev) => [newA, ...prev]);
     setActiveId(newA.id);
     setActiveSection(appMode === "discovery" ? "discoveryTable" : "overview");
@@ -7255,6 +7258,11 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 setAppMode(newMode);
                 localStorage.setItem("appMode", newMode);
                 setActiveSection(newMode === "discovery" ? "discoveryTable" : "overview");
+                // Switch to first project in the new mode
+                const modeProjects = analyses.filter(a => (a.projectMode || "design-specs") === newMode);
+                if (modeProjects.length > 0) {
+                  setActiveId(modeProjects[0].id);
+                }
               }} 
             />
             <div className="flex items-center gap-2 ml-auto shrink-0">
