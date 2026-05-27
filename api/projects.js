@@ -1,7 +1,12 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
 
-// Initialize the projects table if it doesn't exist
-async function ensureTable() {
+function getSQL() {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) throw new Error('No DATABASE_URL or POSTGRES_URL env var found');
+  return neon(url);
+}
+
+async function ensureTable(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -24,10 +29,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    await ensureTable();
+    const sql = getSQL();
+    await ensureTable(sql);
 
     if (req.method === 'GET') {
-      const { rows } = await sql`
+      const rows = await sql`
         SELECT id, name, data, updated_at, updated_by 
         FROM projects 
         ORDER BY updated_at DESC
@@ -42,12 +48,13 @@ export default async function handler(req, res) {
       }
 
       for (const p of projects) {
+        const dataJson = JSON.stringify(p);
         await sql`
           INSERT INTO projects (id, name, data, updated_at, updated_by)
-          VALUES (${p.id}, ${p.name || 'Untitled'}, ${JSON.stringify(p)}, NOW(), ${p.updated_by || null})
+          VALUES (${p.id}, ${p.name || 'Untitled'}, ${dataJson}::jsonb, NOW(), ${p.updated_by || null})
           ON CONFLICT (id) DO UPDATE SET
             name = ${p.name || 'Untitled'},
-            data = ${JSON.stringify(p)},
+            data = ${dataJson}::jsonb,
             updated_at = NOW(),
             updated_by = ${p.updated_by || null}
         `;
@@ -65,6 +72,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('DB error:', error);
-    return res.status(500).json({ error: 'Database error' });
+    return res.status(500).json({ error: error.message || 'Database error' });
   }
 }
