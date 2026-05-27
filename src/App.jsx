@@ -5319,57 +5319,56 @@ export default function RequirementAnalyzer() {
     [analyses]
   );
 
-  // Load data on mount (encrypted if any analysis has secure mode)
+  // Load data on mount from API (shared database)
   useEffect(() => {
     const loadData = async () => {
-      console.log('[LOAD] Starting data load...');
+      console.log('[LOAD] Starting data load from API...');
       try {
-        let saved;
-        // Try encrypted storage first
-        saved = await secureStorage.getItem("requirementAnalyses");
-        console.log('[LOAD] Encrypted storage:', saved ? 'found' : 'not found');
-        
-        // If no encrypted data, try plain storage
-        if (!saved) {
-          saved = localStorage.getItem("requirementAnalyses");
-          console.log('[LOAD] Plain storage:', saved ? 'found' : 'not found');
-        }
-        
-        if (saved) {
-          console.log('[LOAD] Parsing data...');
-          try {
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const rows = await response.json();
+          console.log('[LOAD] API returned', rows.length, 'projects');
+          if (rows.length > 0) {
+            const projects = rows.map(r => migrateAnalysis(typeof r.data === 'string' ? JSON.parse(r.data) : r.data));
+            setAnalyses(projects);
+            if (!activeId || !projects.find(a => a.id === activeId)) {
+              setActiveId(projects[0].id);
+            }
+          } else {
+            console.log('[LOAD] No projects in DB, using defaults');
+          }
+        } else {
+          console.warn('[LOAD] API error, falling back to localStorage');
+          // Fallback to localStorage for local dev
+          let saved = await secureStorage.getItem("requirementAnalyses");
+          if (!saved) saved = localStorage.getItem("requirementAnalyses");
+          if (saved) {
             const parsed = JSON.parse(saved);
-            console.log('[LOAD] Parsed analyses count:', Array.isArray(parsed) ? parsed.length : 0);
             const migrated = Array.isArray(parsed) ? parsed.map(migrateAnalysis) : [];
             if (migrated.length > 0) {
-              console.log('[LOAD] Setting analyses:', migrated.length, 'items');
               setAnalyses(migrated);
               if (!activeId || !migrated.find(a => a.id === activeId)) {
                 setActiveId(migrated[0].id);
               }
-            } else {
-              console.log('[LOAD] No valid analyses found after migration');
             }
-          } catch (parseError) {
-            console.error('[LOAD] Failed to parse saved data, clearing corrupted data:', parseError);
-            // Clear corrupted data
-            localStorage.removeItem("requirementAnalyses");
-            secureStorage.removeItem("requirementAnalyses");
-            // Keep default analyses
           }
-        } else {
-          console.log('[LOAD] No saved data, using defaults');
         }
       } catch (error) {
         console.error("[LOAD] Failed to load data:", error);
-        // Clear potentially corrupted data
+        // Fallback to localStorage for local dev
         try {
-          localStorage.removeItem("requirementAnalyses");
-          secureStorage.removeItem("requirementAnalyses");
-        } catch (clearError) {
-          console.error("[LOAD] Failed to clear data:", clearError);
-        }
-        // Keep default data on error
+          let saved = localStorage.getItem("requirementAnalyses");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const migrated = Array.isArray(parsed) ? parsed.map(migrateAnalysis) : [];
+            if (migrated.length > 0) {
+              setAnalyses(migrated);
+              if (!activeId || !migrated.find(a => a.id === activeId)) {
+                setActiveId(migrated[0].id);
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
       } finally {
         console.log('[LOAD] Load complete, setting dataLoaded = true');
         setDataLoaded(true);
@@ -5408,28 +5407,58 @@ export default function RequirementAnalyzer() {
     }
   }, []);
 
-  // Save to localStorage whenever analyses change (encrypted if any analysis has secure mode)
+  // Save to database whenever analyses change
+  const saveTimeoutRef = useRef(null);
   useEffect(() => {
     const saveData = async () => {
       if (dataLoaded) {
-        console.log('[SAVE] Saving', analyses.length, 'analyses... (secure:', hasSecureAnalysis, ')');
+        console.log('[SAVE] Saving', analyses.length, 'projects to API...');
         try {
-          if (hasSecureAnalysis) {
-            await secureStorage.setItem("requirementAnalyses", JSON.stringify(analyses));
-            console.log('[SAVE] Saved as encrypted');
+          const response = await fetch('/api/projects', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projects: analyses })
+          });
+          if (response.ok) {
+            console.log('[SAVE] Saved to API');
           } else {
+            console.warn('[SAVE] API save failed, saving to localStorage as backup');
             localStorage.setItem("requirementAnalyses", JSON.stringify(analyses));
-            console.log('[SAVE] Saved as plain JSON');
           }
         } catch (error) {
-          console.error('[SAVE] Failed to save:', error);
+          console.warn('[SAVE] API unreachable, saving to localStorage:', error);
+          localStorage.setItem("requirementAnalyses", JSON.stringify(analyses));
         }
-      } else {
-        console.log('[SAVE] Skipping save (dataLoaded =', dataLoaded, ')');
       }
     };
-    saveData();
-  }, [analyses, dataLoaded, hasSecureAnalysis]);
+    // Debounce saves to avoid hammering the API
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(saveData, 1000);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [analyses, dataLoaded]);
+
+  // Poll for updates from other team members every 10 seconds
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const poll = setInterval(async () => {
+      try {
+        const response = await fetch('/api/projects');
+        if (!response.ok) return;
+        const rows = await response.json();
+        if (rows.length > 0) {
+          const projects = rows.map(r => migrateAnalysis(typeof r.data === 'string' ? JSON.parse(r.data) : r.data));
+          // Only update if data actually changed (compare by updated_at timestamps)
+          const remoteTimestamps = rows.map(r => r.updated_at).sort().join(',');
+          const localTimestamps = analyses.map(a => a.updatedAt || '').sort().join(',');
+          if (remoteTimestamps !== localTimestamps) {
+            console.log('[POLL] Remote changes detected, updating...');
+            setAnalyses(projects);
+          }
+        }
+      } catch { /* ignore poll failures */ }
+    }, 10000);
+    return () => clearInterval(poll);
+  }, [dataLoaded, analyses]);
 
   // Remove old secure mode preference (no longer needed)
   useEffect(() => {
