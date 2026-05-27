@@ -25,6 +25,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import OSTCanvas from "./OSTCanvas.jsx";
 import DocumentsSection from "./DocumentsSection.jsx";
 import FeedbackSection from "./FeedbackSection.jsx";
+import GitHubSync, { HybridStorage } from "./githubSync.js";
 
 // --- Encryption Utilities for Secure localStorage ---
 // Uses Web Crypto API to encrypt sensitive data at rest
@@ -239,7 +240,7 @@ const TRANSLATIONS = {
       accept: "Accept",
       reject: "Dismiss",
       thinking: "Thinking...",
-      noKey: "Set your GitHub AI key in the Overview tab to enable AI chat.",
+      noKey: "Enter your GitHub Personal Access Token below to enable AI-powered discovery assistance.",
       secureMode: "AI Chat is disabled in secure mode.",
       proposalLabel: "Suggested change",
       applied: "Applied",
@@ -301,7 +302,7 @@ const TRANSLATIONS = {
       accept: "Acceptér",
       reject: "Afvis",
       thinking: "Tænker...",
-      noKey: "Indstil din GitHub AI-nøgle under Oversigt for at aktivere AI-chat.",
+      noKey: "Indtast dit GitHub Personal Access Token herunder for at aktivere AI-assisteret discovery.",
       secureMode: "AI Chat er deaktiveret i sikker tilstand.",
       proposalLabel: "Foreslået ændring",
       applied: "Anvendt",
@@ -363,7 +364,7 @@ const TRANSLATIONS = {
       accept: "Godkänn",
       reject: "Avvisa",
       thinking: "Tänker...",
-      noKey: "Ställ in din GitHub AI-nyckel under Översikt för att aktivera AI-chatt.",
+      noKey: "Ange ditt GitHub Personal Access Token nedan för att aktivera AI-driven discovery-assistans.",
       secureMode: "AI Chatt är inaktiverad i säkert läge.",
       proposalLabel: "Föreslagen ändring",
       applied: "Tillämpad",
@@ -473,6 +474,18 @@ const createBlankAnalysis = (name = "Untitled Design Task") => ({
     overview: true, problem: true, context: true, assumptions: false, edges: false,
     scope: true, acceptance: true, questions: false, notes: false, research: false, mapping: false, designRefs: false, codeRefs: false, design: true, wireframe: false, actions: false
   } },
+  // Discovery mode: outcomes (each outcome has its own discovery table + OST)
+  outcomes: [],
+  activeOutcomeId: null,
+});
+
+const createOutcome = (name) => ({
+  id: generateId(),
+  name,
+  status: "active",
+  createdAt: new Date().toISOString(),
+  discoveryTable: null,
+  opportunityTree: { outcome: { id: "outcome", text: name }, opportunities: [] },
 });
 
 // Migrate old analysis data to current structure
@@ -508,6 +521,29 @@ const migrateAnalysis = (analysis) => {
     if (migrated.summary.includedSections.designRefs === undefined) migrated.summary.includedSections.designRefs = false;
     if (migrated.summary.includedSections.codeRefs === undefined) migrated.summary.includedSections.codeRefs = false;
   }
+
+  // Migrate discoveryTable + opportunityTree into outcomes (if not already migrated)
+  if (!migrated.outcomes || !Array.isArray(migrated.outcomes)) {
+    migrated.outcomes = [];
+    migrated.activeOutcomeId = null;
+  }
+  if (migrated.outcomes.length === 0 && (migrated.discoveryTable || migrated.opportunityTree)) {
+    // Existing data → create a default outcome from it
+    const outcomeName = migrated.opportunityTree?.outcome?.text || "Default Outcome";
+    const defaultOutcome = {
+      id: generateId(),
+      name: outcomeName,
+      status: "active",
+      createdAt: migrated.createdAt || new Date().toISOString(),
+      discoveryTable: migrated.discoveryTable || null,
+      opportunityTree: migrated.opportunityTree || { outcome: { id: "outcome", text: outcomeName }, opportunities: [] },
+    };
+    migrated.outcomes = [defaultOutcome];
+    migrated.activeOutcomeId = defaultOutcome.id;
+  }
+  // Clean up legacy top-level fields (keep for backward compat but outcomes is source of truth)
+  delete migrated.discoveryTable;
+  delete migrated.opportunityTree;
 
   return migrated;
 };
@@ -4931,8 +4967,34 @@ const ModeSwitch = ({ mode, onChange }) => {
   );
 };
 
+// --- Expandable Evidence Cell (read-only, shows 1 quote collapsed, chevron to expand) ---
+const ExpandableEvidenceCell = ({ value }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!value || value.trim() === "") return <span className="text-xs text-slate-400 italic">—</span>;
+  const quotes = value.split("\n\n").filter(q => q.trim());
+  const primaryQuote = quotes[0];
+  const hasMore = quotes.length > 1;
+
+  return (
+    <div className="relative group/ev">
+      <div className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+        <p className="whitespace-pre-wrap">{expanded ? value : primaryQuote}</p>
+      </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1 flex items-center gap-0.5 text-[10px] text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium transition-colors"
+        >
+          <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          {expanded ? "Show less" : `+${quotes.length - 1} more`}
+        </button>
+      )}
+    </div>
+  );
+};
+
 // --- Discovery Research Table ---
-const DiscoveryTableSection = ({ data, onChange }) => {
+const DiscoveryTableSection = ({ data, outcomeName, onChange }) => {
   const [draggedRowIndex, setDraggedRowIndex] = useState(null);
   const [columnOrganizer, setColumnOrganizer] = useState(false);
   const [columnWidths, setColumnWidths] = useState({});
@@ -4966,8 +5028,7 @@ const DiscoveryTableSection = ({ data, onChange }) => {
     document.body.style.userSelect = 'none';
   };
 
-  const tableData = (data && data.rows && data.rows.length > 0) ? data : {
-    columns: [
+  const DEFAULT_COLUMNS = [
       { id: "col_opp", name: "Opportunity", visible: true },
       { id: "col_rprio", name: "Research ranked prio", visible: true },
       { id: "col_iprio", name: "Internal prio level", visible: true },
@@ -4980,33 +5041,14 @@ const DiscoveryTableSection = ({ data, onChange }) => {
       { id: "col_b2b", name: "B2B admin portal (2026)", visible: true },
       { id: "col_sol", name: "Solutions", visible: true },
       { id: "col_exp", name: "Experiment", visible: true },
-    ],
-    rows: [
-      { id: "row_1", cells: { col_opp: "One-Step Access to Core Information", col_rprio: "1", col_iprio: "", col_obj: "Reduce task completion time for daily admin workflows", col_about: "Eliminate unnecessary drill-down levels for subscription details; surface all relevant info (user name, number, plan, SIM status) in the first view.", col_impact: "High – affects daily repetitive tasks such as name changes and plan checks.", col_dk: "\"It would be nice to have subscription details visible immediately instead of hunting through layers.\" ENREACH\n\n\"Previously, I could see everything directly; now I have to scroll and click 'see details.'\" CARLA", col_se: "\"This looks simpler, less steps, feels more logical.\" CARLA\n\n\"Easier to see things in one place now, but still not all details I'd expect—where do I find start date?\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Flat subscription detail view with all key info visible on first load", col_exp: "A/B test: collapsed vs. expanded default view" } },
-      { id: "row_2", cells: { col_opp: "Universal Search with Smart Filters", col_rprio: "2", col_iprio: "", col_obj: "Reduce time-to-find for subscription lookups", col_about: "Enable a global search bar that retrieves subscriptions by number, name, or account across all cost centers without pre-navigation.", col_impact: "High – reduces wasted time when responding to end-user requests.", col_dk: "\"We need to search quickly; now have to click into accounts before searching.\" ENREACH\n\n\"I now need to find the company and then the cost centre to find a number.\" AMBEA", col_se: "\"Where do I search across everything? I can't see a global search bar.\" ENREACH\n\n\"So, how do I find a person if I don't want to click around?\" CARLA", col_proto: "", col_b2b: "", col_sol: "Global search bar with cross-entity results + filter chips for type/account/status", col_exp: "Prototype test with 5 admins: measure lookup time vs. current flow" } },
-      { id: "row_3", cells: { col_opp: "Bulk Operations for High-Volume Tasks", col_rprio: "3", col_iprio: "", col_obj: "Enable efficient onboarding/offboarding at scale", col_about: "Provide bulk create/edit/delete flows for actions like:\n• Activating multiple SIMs\n• Owner/name changes\n• Moving numbers between accounts", col_impact: "Critical during onboarding/offboarding waves.", col_dk: "\"We miss being able to both create and change several at once.\" ENREACH", col_se: "\"It makes more sense to just order stuff as the orders come in… would be different if we could bulk handle hardware through the portal.\" CARLA", col_proto: "\"This would save time if I can select multiple numbers, but can I? Doesn't look like it yet.\"\n\n\"We miss bulk change—do you plan to add it here?\"", col_b2b: "", col_sol: "Multi-select + batch action bar for common operations (activate, change owner, move)", col_exp: "Wizard prototype for bulk SIM activation with 3 enterprise admins" } },
-      { id: "row_4", cells: { col_opp: "Real-Time Performance and System Response", col_rprio: "4", col_iprio: "", col_obj: "Ensure sub-2s response times for all portal operations", col_about: "Reduce page reload times, optimize database queries, and enable inline actions without full-page refresh.", col_impact: "High – persistent load delays slow down every task.", col_dk: "\"When we make extracts, it takes a long time and we need to clean them manually… the interface is slow to update after changes.\" ENREACH", col_se: "\"Takes a lot of time to upload results in current portal.\" AMBEA", col_proto: "(not applicable since Figma prototype)", col_b2b: "", col_sol: "Server-side pagination, optimistic UI updates, background processing for exports", col_exp: "Performance benchmark: measure load times before/after optimization sprint" } },
-      { id: "row_5", cells: { col_opp: "Role-Based Admin Access and Delegation", col_rprio: "5", col_iprio: "", col_obj: "Support compliance and decentralized admin management", col_about: "Introduce granular roles for assistants or department-level admins to manage only their scope (e.g., assigned cost centers).", col_impact: "High for compliance and decentralization, especially in large enterprises.", col_dk: "\"We have a lot of users with same role but all have full access; would be nice to limit depending on task.\" ENREACH", col_se: "\"High priority… allow admin access per cost centre.\" INVESTOR", col_proto: "(not applicable since Admin design was not part of prototype design)", col_b2b: "", col_sol: "Role-based permission matrix with scope-limited admin accounts", col_exp: "Co-design workshop with 2 enterprise IT admins on permission model" } },
-      { id: "row_6", cells: { col_opp: "Real-Time Usage & Cost Overviews", col_rprio: "6", col_iprio: "", col_obj: "Enable proactive cost control without manual data gathering", col_about: "Provide dashboard widgets showing:\n• Current spend vs. budget\n• Roaming activity alerts\n• High-data user highlights", col_impact: "High for cost control and proactive management.", col_dk: "\"Would be useful to handle roaming or extra data without going into files manually; now we have to look up most files in Excel to see data packages.\" ENREACH", col_se: "\"It would be nice to have alerts when a user has excessive usage abroad.\" BICO", col_proto: "", col_b2b: "", col_sol: "Dashboard with spend/budget widget, roaming alert cards, top-consumer list", col_exp: "Usage alert email mockup: test with 10 admins if threshold notifications reduce manual checks" } },
-      { id: "row_7", cells: { col_opp: "Reliable Activity History / Change Logs", col_rprio: "7", col_iprio: "", col_obj: "Provide full audit trail for multi-admin accountability", col_about: "Display who did what and when for accountability across multiple admins.", col_impact: "Critical for compliance in enterprise accounts.", col_dk: "\"Sometimes we need to know what date the subscription changed to another plan or who did it.\" ENREACH\n\n\"Multiple admins in some orgs need transparency.\" CARLA", col_se: "\"Where do I see what others changed? Doesn't seem here yet.\" CARLA\n\n\"Audit trail—will that be added? Important when multiple admins exist.\" ENREACH", col_proto: "", col_b2b: "", col_sol: "Timestamped activity feed per subscription with admin identity and change details", col_exp: "Fake-door test: add 'View history' button and measure click rate" } },
-      { id: "row_8", cells: { col_opp: "Customizable Table Views and Column Management", col_rprio: "8", col_iprio: "", col_obj: "Improve efficiency for power users with personalized layouts", col_about: "Allow admins to choose columns, pin data, and save custom list layouts for faster scanning and task execution.", col_impact: "Medium – improves efficiency for experienced users.", col_dk: "\"We can't make an extract on a single customer, then we need to do it for all and clean manually.\"\n\n\"There's a manual input to the spreadsheet because filters are missing.\" ENREACH", col_se: "Limited mention, but frustration: \"You have to click into details for info, would be better in overview.\" CARLA", col_proto: "Positive reaction: \"Being able to customize columns or what you see is good, but is that possible here?\" (Carla).", col_b2b: "", col_sol: "Column picker, saved view presets, drag-to-reorder columns", col_exp: "Prototype: let 5 admins configure their ideal list view, compare task speed" } },
-      { id: "row_9", cells: { col_opp: "Intelligent Export & Reporting Experience", col_rprio: "9", col_iprio: "", col_obj: "Reduce manual data cleanup for finance and audits", col_about: "Offer filtered CSV/PDF export for selected entities, avoiding full-database dumps and manual cleanup.", col_impact: "Medium – recurring pain for finance audits and customer reports.", col_dk: "", col_se: "\"We need to download invoices and usage data multiple times, then move it into Oracle for approval.\" FEDEX", col_proto: "\"Will there be export by selection? That's critical.\" ENREACH", col_b2b: "", col_sol: "Filtered export with column/row selection + scheduled report generation", col_exp: "Concierge test: manually generate filtered exports for 3 admins, measure satisfaction" } },
-      { id: "row_10", cells: { col_opp: "Clearer Interaction Copy & Structure", col_rprio: "10", col_iprio: "", col_obj: "Reduce cognitive load and error rates during common flows", col_about: "Reduce cognitive load with better labels, fewer modal layers, and predictable flows:\n• Replace vague buttons (e.g., \"See details\") with descriptive actions\n• Remove redundant confirmations", col_impact: "Medium – improves learnability and error resilience.", col_dk: "\"It would be nice to filter by company first instead of all this scrolling… better overview by accounts.\" ENREACH", col_se: "\"Now I have to scroll down and click 'see details'; before it was clearer.\" CARLA\n\n\"I need to find the company and then the cost centre to find a number.\" AMBEA", col_proto: "CARLA: \"This looks simpler, less steps, feels more logical.\"", col_b2b: "", col_sol: "UX copy audit + action-oriented button labels + progressive disclosure", col_exp: "5-second test: old vs. new button labels—measure comprehension rate" } },
-      { id: "row_11", cells: { col_opp: "Alignment with Admin Mental Models", col_rprio: "11", col_iprio: "", col_obj: "Reduce task fragmentation by matching admin workflow patterns", col_about: "Restructure navigation and grouping of features to match admin workflows, not internal system logic:\n• Onboarding hub (create > assign > approve)\n• Cost control hub (monitor > report > export)", col_impact: "High – reduces task fragmentation.", col_dk: "\"Need option to choose between different companies at start… so we don't scroll everything.\" ENREACH", col_se: "\"Friction exists when admins shift between screens for related tasks.\" AMBEA", col_proto: "\"I think we need to have something when we can choose between different companies… accounts.\"\n→ Expected account-selection step earlier in flow.", col_b2b: "", col_sol: "Task-based navigation hubs (Onboarding, Cost control, Support) vs. entity-based", col_exp: "Card sort with 8 admins: validate navigation groupings match mental models" } },
-      { id: "row_12", cells: { col_opp: "Mobile-Responsive Interface for Emergency Tasks", col_rprio: "12", col_iprio: "", col_obj: "Enable critical actions without desktop dependency", col_about: "Enable simplified mobile interactions for critical tasks (SIM unlock, PIN lookup) without requiring full desktop workflows.", col_impact: "Medium – supports business continuity.", col_dk: "\"Sometimes we need to check details quickly – would be useful if possible without PC.\" ENREACH", col_se: "\"If I'm away from laptop, I'd log in quickly to check SIM code, but not for full orders.\" CARLA", col_proto: "No mobile version was shown; expectation raised for quick PIN view if needed.", col_b2b: "", col_sol: "Mobile-optimized emergency actions: SIM unlock, PIN view, quick status check", col_exp: "Diary study: ask 5 admins to log mobile needs for 2 weeks" } },
-      { id: "row_13", cells: { col_opp: "Compliance-First Authentication Experience", col_rprio: "13", col_iprio: "", col_obj: "Balance security compliance with login friction", col_about: "Maintain flexibility for MFA and BankID but support secure session timeouts and SSO for enterprise admins.\n\nMixed preferences for login (BankID vs credentials vs mid-ID) across markets.", col_impact: "Medium – trust and security adherence.", col_dk: "\"We use email and password… would two-factor be an option?\" ENREACH\n\n\"In Denmark it's all multifactor… using MitID in company tools.\" FEDEX", col_se: "\"I have BankID set up, I could use that, but usually use saved credentials because it's faster.\" CARLA", col_proto: "\"Will MFA and SSO be supported? Enterprise users expect both.\"", col_b2b: "", col_sol: "SSO + configurable MFA (BankID, MitID, TOTP) with admin-set session policies", col_exp: "Survey: collect MFA preferences from 20 admins across DK/SE markets" } },
-      { id: "row_14", cells: { col_opp: "Explainability & Transparency on Changes", col_rprio: "14", col_iprio: "", col_obj: "Prevent migration frustration through proactive communication", col_about: "Whenever UI redesign adds steps or alters hierarchy, communicate 'why' upfront, provide in-context tips.\n\nEvidence: Update complaints from existing users.", col_impact: "High – prevents frustration during migration.", col_dk: "(not redesigned recently so does not apply)", col_se: "\"So this functions differently now, but what happened to the old shortcuts?\" ENREACH\n\n\"Multiple users asked: 'Where do we find X now?' No in-line tips or explanation during new flow demo.\"", col_proto: "", col_b2b: "", col_sol: "In-context onboarding tips + 'What changed' changelog panel on login", col_exp: "Before/after test: measure support ticket volume with vs. without changelog" } },
-    ]
+  ];
+
+  const tableData = (data && data.rows) ? data : {
+    columns: DEFAULT_COLUMNS,
+    rows: [],
   };
 
   const updateData = (updates) => { onChange({ ...tableData, ...updates }); };
-
-  // Persist default data on first mount so OST sync can access it
-  useEffect(() => {
-    if (!data || !data.rows || data.rows.length === 0) {
-      onChange(tableData);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addRow = () => {
     const newRow = { id: generateId(), cells: tableData.columns.reduce((acc, col) => ({ ...acc, [col.id]: "" }), {}) };
@@ -5041,7 +5083,15 @@ const DiscoveryTableSection = ({ data, onChange }) => {
 
   return (
     <div>
-      <SectionHeader title="Discovery Research" description="Track opportunities, priorities, objectives, and evidence for informed decision-making." />
+      {outcomeName && (
+        <div className="mb-4 px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Outcome:</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{outcomeName}</span>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Track opportunities, priorities, and evidence for informed decision-making.</p>
+        </div>
+      )}
       <div className="flex items-center justify-end mb-4">
         <button onClick={() => setColumnOrganizer(!columnOrganizer)} className="px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-500 transition-colors font-medium flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
@@ -5067,9 +5117,15 @@ const DiscoveryTableSection = ({ data, onChange }) => {
         </div>
       )}
       {tableData.rows.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
-          <p className="text-sm">No data yet</p>
-          <p className="text-xs mt-1">Add rows to start tracking discovery research</p>
+        <div className="text-center py-16 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
+          <svg className="w-8 h-8 mx-auto mb-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18M3 18h18M3 6h18" />
+          </svg>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Start your discovery research</p>
+          <p className="text-xs mt-1 mb-4">Add your first opportunity row to begin analysing this outcome</p>
+          <button onClick={addRow} className="px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            + Add first row
+          </button>
         </div>
       ) : (
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -5129,12 +5185,15 @@ const DiscoveryTableSection = ({ data, onChange }) => {
                       (col.id === "col_dk" || col.id === "col_se" || col.id === "col_proto" || col.id === "col_b2b") ? "bg-purple-50/40 dark:bg-purple-900/10" :
                       (col.id === "col_sol" || col.id === "col_exp") ? "bg-emerald-50/40 dark:bg-emerald-900/10" : "";
                     const isAiColumn = col.id === "col_sol" || col.id === "col_exp";
+                    const isEvidenceColumn = col.id === "col_dk" || col.id === "col_se" || col.id === "col_proto" || col.id === "col_b2b";
                     const cellValue = row.cells[col.id] || "";
                     const teamKey = col.id + "_team";
                     const teamValue = row.cells[teamKey] || "";
                     return (
                       <td key={col.id} className={`px-2 py-1 border-l border-slate-200 dark:border-slate-700 align-top ${sectionBg}`}>
-                        {isAiColumn ? (
+                        {isEvidenceColumn ? (
+                          <ExpandableEvidenceCell value={cellValue} />
+                        ) : isAiColumn ? (
                           <div className="flex flex-col gap-1.5">
                             {showAiSuggestions && (
                               <div>
@@ -5207,6 +5266,14 @@ export default function RequirementAnalyzer() {
   const [gistLoading, setGistLoading] = useState(false);
   const [gistExpanded, setGistExpanded] = useState(false);
   const [syncOptionsExpanded, setSyncOptionsExpanded] = useState(false);
+  
+  // GitHub Repository Sync (Option 2)
+  const [githubRepoOwner, setGithubRepoOwner] = useState(() => localStorage.getItem("githubRepoOwner") || "");
+  const [githubRepoName, setGithubRepoName] = useState(() => localStorage.getItem("githubRepoName") || "");
+  const [githubRepoBranch, setGithubRepoBranch] = useState(() => localStorage.getItem("githubRepoBranch") || "data");
+  const [githubRepoExpanded, setGithubRepoExpanded] = useState(false);
+  const [githubSyncStatus, setGithubSyncStatus] = useState(null);
+  const githubSyncRef = useRef(null);
   const [audioModalOpen, setAudioModalOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -5229,6 +5296,14 @@ export default function RequirementAnalyzer() {
   
   // Global app mode: Discovery vs Design Specs
   const [appMode, setAppMode] = useState(() => localStorage.getItem("appMode") || "design-specs");
+
+  // Outcome wizard state
+  const [outcomeWizardOpen, setOutcomeWizardOpen] = useState(false);
+  const [outcomeWizardStep, setOutcomeWizardStep] = useState(1);
+  const [outcomeWizardName, setOutcomeWizardName] = useState("");
+  const [outcomeWizardConfirmed, setOutcomeWizardConfirmed] = useState(false);
+  const [showArchivedOutcomes, setShowArchivedOutcomes] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState(null);
   
   // AI Chat state (ephemeral — cleared on reload and task switch)
   const [chatMessages, setChatMessages] = useState([]);
@@ -5384,6 +5459,62 @@ export default function RequirementAnalyzer() {
     }
   }, [githubAIKey]);
 
+  // Save GitHub Repository settings to localStorage
+  useEffect(() => {
+    if (githubRepoOwner) localStorage.setItem("githubRepoOwner", githubRepoOwner);
+    else localStorage.removeItem("githubRepoOwner");
+  }, [githubRepoOwner]);
+
+  useEffect(() => {
+    if (githubRepoName) localStorage.setItem("githubRepoName", githubRepoName);
+    else localStorage.removeItem("githubRepoName");
+  }, [githubRepoName]);
+
+  useEffect(() => {
+    localStorage.setItem("githubRepoBranch", githubRepoBranch);
+  }, [githubRepoBranch]);
+
+  // Initialize GitHub Sync instance
+  useEffect(() => {
+    if (!githubSyncRef.current) {
+      githubSyncRef.current = new GitHubSync({
+        token: githubToken,
+        owner: githubRepoOwner,
+        repo: githubRepoName,
+        branch: githubRepoBranch,
+        filePath: 'requirement-analyzer-data.json'
+      });
+
+      // Listen to sync status updates
+      githubSyncRef.current.addListener((status) => {
+        setGithubSyncStatus(status);
+      });
+    } else {
+      // Update configuration
+      githubSyncRef.current.updateConfig({
+        token: githubToken,
+        owner: githubRepoOwner,
+        repo: githubRepoName,
+        branch: githubRepoBranch,
+      });
+    }
+  }, [githubToken, githubRepoOwner, githubRepoName, githubRepoBranch]);
+
+  // Auto-save to GitHub when analyses change
+  useEffect(() => {
+    const saveToGitHub = async () => {
+      if (dataLoaded && githubSyncRef.current && githubSyncRef.current.isConfigured() && !hasSecureAnalysis) {
+        try {
+          const hybridStorage = new HybridStorage(githubSyncRef.current, 'requirementAnalyses');
+          await hybridStorage.save(analyses, false); // false = debounced auto-save
+        } catch (error) {
+          console.error('[GitHub Sync] Auto-save failed:', error);
+        }
+      }
+    };
+    saveToGitHub();
+  }, [analyses, dataLoaded, hasSecureAnalysis]);
+
   // Reset chat messages when switching tasks
   useEffect(() => {
     setChatMessages([]);
@@ -5391,6 +5522,12 @@ export default function RequirementAnalyzer() {
   }, [activeId]);
 
   const active = useMemo(() => analyses.find((a) => a.id === activeId), [analyses, activeId]);
+
+  // Active outcome for discovery mode
+  const activeOutcome = useMemo(() => {
+    if (!active || !active.outcomes || !active.activeOutcomeId) return null;
+    return active.outcomes.find((o) => o.id === active.activeOutcomeId) || null;
+  }, [active]);
 
   const filteredAnalyses = useMemo(() => {
     if (phaseFilter === "All") return analyses;
@@ -5420,15 +5557,20 @@ export default function RequirementAnalyzer() {
     [activeId]
   );
 
-  // Sync discovery table opportunities → OST canvas
+  // Sync discovery table opportunities → OST canvas (scoped to active outcome)
   const syncTableToOST = useCallback((tableData) => {
     if (!tableData || !tableData.rows) return;
 
     setAnalyses((prev) =>
       prev.map((a) => {
         if (a.id !== activeId) return a;
+        if (!a.activeOutcomeId || !a.outcomes) return a;
 
-        const currentTree = a.opportunityTree || { outcome: { id: "outcome", text: "Desired Outcome" }, opportunities: [] };
+        const outcomeIdx = a.outcomes.findIndex((o) => o.id === a.activeOutcomeId);
+        if (outcomeIdx === -1) return a;
+
+        const outcome = a.outcomes[outcomeIdx];
+        const currentTree = outcome.opportunityTree || { outcome: { id: "outcome", text: outcome.name }, opportunities: [] };
         const existingOpps = currentTree.opportunities || [];
 
         // Build map of existing opportunities by their source row ID
@@ -5442,10 +5584,8 @@ export default function RequirementAnalyzer() {
           const oppName = row.cells?.col_opp || "Untitled Opportunity";
           const existing = existingByRowId[row.id];
           if (existing) {
-            // Update text, preserve solutions/experiments
             return { ...existing, text: oppName };
           } else {
-            // New opportunity linked to this row
             return {
               id: row.id.replace("row_", "opp_"),
               sourceRowId: row.id,
@@ -5456,25 +5596,28 @@ export default function RequirementAnalyzer() {
         });
 
         const newTree = { ...currentTree, opportunities: newOpps };
-        delete newTree.positions; // Will be recalculated on canvas open
+        delete newTree.positions;
 
-        return { ...a, opportunityTree: newTree, updatedAt: new Date().toISOString() };
+        const newOutcomes = [...a.outcomes];
+        newOutcomes[outcomeIdx] = { ...outcome, opportunityTree: newTree };
+
+        return { ...a, outcomes: newOutcomes, updatedAt: new Date().toISOString() };
       })
     );
   }, [activeId]);
 
   // Initial sync: populate OST from table data if OST has no opportunities yet
   useEffect(() => {
-    if (!dataLoaded || !active) return;
-    const table = active.discoveryTable;
-    const tree = active.opportunityTree;
+    if (!dataLoaded || !active || !activeOutcome) return;
+    const table = activeOutcome.discoveryTable;
+    const tree = activeOutcome.opportunityTree;
     // Only sync if table has rows and OST has no opportunities (or no tree at all)
     if (table && table.rows && table.rows.length > 0) {
       if (!tree || !tree.opportunities || tree.opportunities.length === 0) {
         syncTableToOST(table);
       }
     }
-  }, [activeId, dataLoaded]); // Run after data loads or analysis switch
+  }, [activeId, active?.activeOutcomeId, dataLoaded]); // Run after data loads or outcome switch
 
   // --- AI Chat ---
   const sendChatMessage = useCallback(async (userMessage) => {
@@ -5490,7 +5633,63 @@ export default function RequirementAnalyzer() {
     delete taskContext.designRefs; // design ref URLs/images not useful for chat
     delete taskContext.codeRefs; // code ref URLs not useful for chat
 
-    const systemPrompt = `You are an expert UX/product design assistant helping analyze a requirement task. You have full access to the current task data below.
+    let systemPrompt;
+    if (appMode === "discovery") {
+      const outcomeContext = activeOutcome ? {
+        outcomeName: activeOutcome.name,
+        discoveryTable: activeOutcome.discoveryTable,
+        opportunityTree: activeOutcome.opportunityTree
+      } : null;
+
+      systemPrompt = `You are an expert product discovery assistant grounded in Teresa Torres' Opportunity Solution Tree (OST) framework and Continuous Discovery Habits.
+
+## OST Framework Reference
+The Opportunity Solution Tree is a visual tool that maps:
+- **Outcome** (top): A measurable business or product outcome the team is driving toward (e.g. "Reduce task completion time")
+- **Opportunities** (middle): Customer needs, pain points, or desires discovered through research. Opportunities are NOT features or solutions. They represent the customer's world. Good opportunities are specific, distinct, and actionable.
+- **Solutions** (below opportunities): Ideas that address a specific opportunity. Multiple solutions can map to one opportunity. Solutions should be lightweight and testable.
+- **Experiments** (bottom): Small, fast tests to validate assumptions behind a solution before committing to build it. Types include: prototype tests, one-question surveys, data mining, concierge tests.
+
+Key principles:
+- Work top-down: define the outcome first, then discover opportunities through customer interviews, then ideate solutions, then test assumptions.
+- Opportunities come from what customers say, do, and feel — not from what stakeholders request.
+- Compare and contrast opportunities before choosing which to pursue.
+- Break large opportunities into smaller, more specific child opportunities.
+- Never skip from outcome directly to solution — always identify the opportunity layer.
+- Use "story mapping" structure: opportunities are needs/pain points in the customer's journey.
+- Assumption mapping: for each solution, identify desirability, viability, feasibility, and usability assumptions. Test the riskiest first.
+
+Your ONLY focus is helping with product discovery tasks:
+- Identifying customer opportunities, needs, and pain points related to the current outcome
+- Suggesting rows for the discovery table (opportunities, prioritization, solutions, experiments)
+- Helping structure and refine the Opportunity Solution Tree
+- Advising on discovery research methods and interview questions
+- Analysing patterns across discovery data
+
+You must NOT help with unrelated topics. If the user asks about something outside product discovery, politely redirect them to focus on discovery work.
+
+Current outcome: ${outcomeContext ? outcomeContext.outcomeName : "(none selected)"}
+Discovery project: "${active?.name || "Untitled"}"
+
+Available source documents (user research interview transcripts):
+- DK — Enreach, DK — Jettime, DK — Visma (Denmark market)
+- SE — Ambea, SE — Bico, SE — Carla, SE — FedEx, SE — Investor (Sweden market)
+These are customer interview transcripts accessible via the "Source Documents" tab. Reference them when suggesting research-backed opportunities.
+
+${outcomeContext ? `Current discovery table data:
+${JSON.stringify(outcomeContext.discoveryTable, null, 2)}
+
+Opportunity tree:
+${JSON.stringify(outcomeContext.opportunityTree, null, 2)}` : "No outcome selected yet."}
+
+When you want to suggest adding rows to the discovery table, include a JSON block:
+\`\`\`json
+{"proposals": [{"section": "discoveryTable", "field": "_addRow", "value": {"col_opp": "opportunity text", "col_rprio": "High/Medium/Low", "col_sol": "potential solution"}, "reason": "<brief reason>"}]}
+\`\`\`
+
+Be concise and actionable. Respond in the same language the user writes in.`;
+    } else {
+      systemPrompt = `You are an expert UX/product design assistant helping analyze a requirement task. You have full access to the current task data below.
 
 Current section the user is viewing: "${activeSection}"
 
@@ -5510,6 +5709,7 @@ When the user asks you to make changes or you want to suggest edits, include a J
 For array fields (assumptions, questions, actions, acceptanceCriteria), use the field "_add" and provide an object to append.
 Only include the JSON block when proposing concrete changes. For general answers, just respond in plain text.
 Be concise and actionable. Respond in the same language the user writes in.`;
+    }
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -5605,10 +5805,10 @@ Be concise and actionable. Respond in the same language the user writes in.`;
   }, [active, updateActive]);
 
   const createNew = () => {
-    const newA = createBlankAnalysis();
+    const newA = createBlankAnalysis(appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task");
     setAnalyses((prev) => [newA, ...prev]);
     setActiveId(newA.id);
-    setActiveSection("overview");
+    setActiveSection(appMode === "discovery" ? "discoveryTable" : "overview");
     setPhaseFilter("All");
   };
 
@@ -5624,6 +5824,61 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       return next;
     });
   };
+
+  // --- Outcome CRUD ---
+  const addOutcome = useCallback((name) => {
+    const newOutcome = createOutcome(name);
+    setAnalyses((prev) =>
+      prev.map((a) => {
+        if (a.id !== activeId) return a;
+        return {
+          ...a,
+          outcomes: [...(a.outcomes || []), newOutcome],
+          activeOutcomeId: newOutcome.id,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  }, [activeId]);
+
+  const archiveOutcome = useCallback((outcomeId) => {
+    setAnalyses((prev) =>
+      prev.map((a) => {
+        if (a.id !== activeId) return a;
+        const newOutcomes = (a.outcomes || []).map((o) =>
+          o.id === outcomeId ? { ...o, status: "archived" } : o
+        );
+        // If archiving the active outcome, switch to first active one
+        let newActiveId = a.activeOutcomeId;
+        if (a.activeOutcomeId === outcomeId) {
+          const nextActive = newOutcomes.find((o) => o.status === "active" && o.id !== outcomeId);
+          newActiveId = nextActive ? nextActive.id : null;
+        }
+        return { ...a, outcomes: newOutcomes, activeOutcomeId: newActiveId, updatedAt: new Date().toISOString() };
+      })
+    );
+  }, [activeId]);
+
+  const switchOutcome = useCallback((outcomeId) => {
+    setAnalyses((prev) =>
+      prev.map((a) => {
+        if (a.id !== activeId) return a;
+        return { ...a, activeOutcomeId: outcomeId, updatedAt: new Date().toISOString() };
+      })
+    );
+  }, [activeId]);
+
+  const updateOutcomeField = useCallback((outcomeId, field, value) => {
+    setAnalyses((prev) =>
+      prev.map((a) => {
+        if (a.id !== activeId) return a;
+        const newOutcomes = (a.outcomes || []).map((o) =>
+          o.id === outcomeId ? { ...o, [field]: value } : o
+        );
+        return { ...a, outcomes: newOutcomes, updatedAt: new Date().toISOString() };
+      })
+    );
+  }, [activeId]);
 
   const updateName = (name) => {
     setAnalyses((prev) => prev.map((a) => {
@@ -6487,6 +6742,45 @@ Be concise and actionable. Respond in the same language the user writes in.`;
     }
   };
 
+  // GitHub Repository Sync handlers
+  const handleLoadFromGitHub = async () => {
+    if (!githubSyncRef.current || !githubSyncRef.current.isConfigured()) {
+      alert("Please configure GitHub repository settings first:\n- Owner (your GitHub username or org)\n- Repository name\n- Personal access token");
+      return;
+    }
+
+    try {
+      const data = await githubSyncRef.current.loadData();
+      if (data && Array.isArray(data)) {
+        const migrated = data.map(migrateAnalysis);
+        setAnalyses(migrated);
+        if (migrated.length > 0) {
+          setActiveId(migrated[0].id);
+        }
+        alert(`Successfully loaded ${migrated.length} analysis/analyses from GitHub!`);
+      } else {
+        alert("No data found in GitHub repository. Data will be saved on next change.");
+      }
+    } catch (error) {
+      alert(`Failed to load from GitHub:\n${error.message}\n\nMake sure:\n- Repository exists and you have access\n- Token has 'repo' scope\n- Branch name is correct`);
+    }
+  };
+
+  const handleSaveToGitHub = async () => {
+    if (!githubSyncRef.current || !githubSyncRef.current.isConfigured()) {
+      alert("Please configure GitHub repository settings first.");
+      return;
+    }
+
+    try {
+      const hybridStorage = new HybridStorage(githubSyncRef.current, 'requirementAnalyses');
+      await hybridStorage.syncNow(analyses);
+      alert("Successfully saved all analyses to GitHub!");
+    } catch (error) {
+      alert(`Failed to save to GitHub:\n${error.message}`);
+    }
+  };
+
   // Audio analysis handlers
   const handleStartRecording = async () => {
     setAudioProcessing(true);
@@ -6677,8 +6971,31 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
     if (!githubAIKey) {
       return (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">{t.noKey}</p>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center space-y-3 max-w-[260px]">
+            <svg className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t.noKey}</p>
+            <input
+              type="password"
+              placeholder="ghp_... or github_pat_..."
+              className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                  setGitHubAIKey(e.target.value.trim());
+                  localStorage.setItem("githubAIKey", e.target.value.trim());
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value.trim()) {
+                  setGitHubAIKey(e.target.value.trim());
+                  localStorage.setItem("githubAIKey", e.target.value.trim());
+                }
+              }}
+            />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">Press Enter to save. Needs <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">models:read</code> scope.</p>
+          </div>
         </div>
       );
     }
@@ -6688,8 +7005,19 @@ Be concise and actionable. Respond in the same language the user writes in.`;
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           {chatMessages.length === 0 && (
-            <div className="text-xs text-slate-400 dark:text-slate-500 text-center mt-8 leading-relaxed">
-              {t.placeholder}
+            <div className="text-xs text-slate-400 dark:text-slate-500 text-center mt-8 leading-relaxed px-2">
+              {appMode === "discovery" ? (
+                <div className="space-y-2">
+                  <p className="font-medium text-slate-500 dark:text-slate-400">Discovery Assistant</p>
+                  <p>Ask me to help you find opportunities, suggest table rows, or refine your Opportunity Solution Tree.</p>
+                  <div className="mt-3 text-left space-y-1 text-[10px] text-slate-400 dark:text-slate-500">
+                    <p className="font-medium text-slate-500 dark:text-slate-400 mb-1">Try:</p>
+                    <p>"What opportunities might exist for this outcome?"</p>
+                    <p>"Suggest interview questions for discovery"</p>
+                    <p>"Help me prioritize these opportunities"</p>
+                  </div>
+                </div>
+              ) : t.placeholder}
             </div>
           )}
           {chatMessages.map((msg) => (
@@ -6703,7 +7031,13 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 {/* Proposal cards */}
                 {msg.proposals && msg.proposals.length > 0 && (
                   <div className="mt-2 space-y-2">
-                    {msg.proposals.map((proposal, idx) => (
+                    {msg.proposals.map((proposal, idx) => {
+                      // Human-readable labels for discovery table columns
+                      const colLabels = { col_opp: "Opportunity", col_rprio: "Priority", col_iprio: "Impact", col_obj: "Objective", col_about: "About", col_impact: "Impact area", col_dk: "DK evidence", col_se: "SE evidence", col_proto: "Prototype", col_b2b: "B2B context", col_sol: "Solution idea", col_exp: "Experiment" };
+                      const isDiscoveryRow = proposal.field === "_addRow" && proposal.section === "discoveryTable";
+                      const friendlyTitle = isDiscoveryRow ? "Add row to table" : proposal.field === "_add" ? "Add item" : `Update ${proposal.field}`;
+
+                      return (
                       <div key={idx} className={`rounded-md border p-2 ${
                         proposal.applied
                           ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30'
@@ -6711,12 +7045,15 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                       }`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{t.proposalLabel}</div>
-                            <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                              <span className="text-slate-400 dark:text-slate-500">{proposal.section}.</span>{proposal.field === '_add' ? '(add)' : proposal.field}
-                            </div>
+                            <div className="text-[10px] uppercase tracking-wide font-semibold text-blue-600 dark:text-blue-400 mb-1">{friendlyTitle}</div>
                             <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 rounded p-1.5 border border-slate-200 dark:border-slate-600 whitespace-pre-wrap break-words">
-                              {typeof proposal.value === 'string' ? proposal.value : JSON.stringify(proposal.value, null, 2)}
+                              {isDiscoveryRow && typeof proposal.value === 'object' ? (
+                                <div className="space-y-1">
+                                  {Object.entries(proposal.value).map(([key, val]) => val ? (
+                                    <div key={key}><span className="font-medium text-slate-700 dark:text-slate-300">{colLabels[key] || key}:</span> {val}</div>
+                                  ) : null)}
+                                </div>
+                              ) : typeof proposal.value === 'string' ? proposal.value : JSON.stringify(proposal.value, null, 2)}
                             </div>
                             {proposal.reason && (
                               <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 italic">{proposal.reason}</div>
@@ -6753,7 +7090,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </div>
@@ -6849,9 +7187,15 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       case "design": return <DesignSystemSection data={active.design || {}} language={lang} onChange={(v) => updateActive("design", v)} />;
       case "wireframe": return <WireframeSection data={active.wireframe || { iaSteps: [] }} analysis={active} language={lang} githubAIKey={githubAIKey} onChange={(v) => updateActive("wireframe", v)} />;
       case "summary": return <SummarySection data={active.summary} language={lang} analysis={active} onChange={(v) => updateActive("summary", v)} onGenerateAIBrief={() => handleGenerateAIBrief()} />;
-      // Discovery mode sections
-      case "discoveryTable": return <DiscoveryTableSection data={active.discoveryTable} onChange={(v) => { updateActive("discoveryTable", v); syncTableToOST(v); }} />;
-      case "opportunityTree": return <OSTCanvas data={active.opportunityTree} onChange={(v) => updateActive("opportunityTree", v)} />;
+      // Discovery mode sections (scoped to active outcome)
+      case "discoveryTable": {
+        if (!activeOutcome) return <div className="text-center py-12 text-slate-500 dark:text-slate-400"><p className="text-sm">No outcome selected.</p><p className="text-xs mt-1">Create an outcome in the sidebar to start.</p></div>;
+        return <DiscoveryTableSection data={activeOutcome.discoveryTable} outcomeName={activeOutcome.name} onChange={(v) => { updateOutcomeField(activeOutcome.id, "discoveryTable", v); syncTableToOST(v); }} />;
+      }
+      case "opportunityTree": {
+        if (!activeOutcome) return <div className="text-center py-12 text-slate-500 dark:text-slate-400"><p className="text-sm">No outcome selected.</p><p className="text-xs mt-1">Create an outcome in the sidebar to start.</p></div>;
+        return <OSTCanvas data={activeOutcome.opportunityTree} onChange={(v) => updateOutcomeField(activeOutcome.id, "opportunityTree", v)} />;
+      }
       case "sourceDocuments": return <DocumentsSection />;
       case "feedback": return <FeedbackSection />;
       default: return null;
@@ -6913,13 +7257,13 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                   )}
                 </button>
                 <button
-                  onClick={() => setActionsPanelOpen(!actionsPanelOpen)}
+                  onClick={() => { setActionsPanelOpen(!actionsPanelOpen); if (!actionsPanelOpen && appMode === "discovery") setRightPanelTab("chat"); }}
                   className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
                     actionsPanelOpen 
                       ? "bg-slate-800 dark:bg-slate-600 text-white hover:bg-slate-700 dark:hover:bg-slate-500" 
                       : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
                   }`}
-                  title={actionsPanelOpen ? "Close actions panel" : "Open actions panel"}
+                  title={actionsPanelOpen ? "Close panel" : "Open panel"}
                 >
                   {actionsPanelOpen ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6930,7 +7274,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                       </svg>
-                      <span>Open Actions</span>
+                      <span>{appMode === "discovery" ? "Discovery AI" : "Open Actions"}</span>
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
@@ -7028,9 +7372,15 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             {filteredAnalyses.map((a) => {
               const comp = getCompletion(a);
               return (
+                <div key={a.id}>
                 <div
-                  key={a.id}
-                  onClick={() => { setActiveId(a.id); setActiveSection("overview"); }}
+                  onClick={() => { 
+                    if (a.id !== activeId) {
+                      setActiveId(a.id); 
+                      setActiveSection(appMode === "discovery" ? "discoveryTable" : "overview");
+                    }
+                  }}
+                  onDoubleClick={() => setEditingProjectId(a.id)}
                   className={`mx-2 mb-1 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors ${
                     a.id === activeId ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                   }`}
@@ -7041,7 +7391,27 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     </div>
                   )}
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words">{a.name || "Untitled Design Task"}</span>
+                    {editingProjectId === a.id ? (
+                      <input
+                        autoFocus
+                        className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 bg-white dark:bg-slate-600 border border-indigo-300 dark:border-indigo-600 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-400"
+                        defaultValue={a.name || ""}
+                        onBlur={(e) => { updateName(e.target.value); setEditingProjectId(null); }}
+                        onKeyDown={(e) => { 
+                          if (e.key === "Enter") { updateName(e.target.value); setEditingProjectId(null); }
+                          if (e.key === "Escape") setEditingProjectId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span 
+                        className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 break-words"
+                        onClick={(e) => { if (a.id === activeId) { e.stopPropagation(); setEditingProjectId(a.id); } }}
+                        title={a.id === activeId ? "Click to rename" : ""}
+                      >
+                        {a.name || (appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task")}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 shrink-0">
                       {a.secureMode && (
                         <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700" title="Secure mode enabled">
@@ -7060,6 +7430,68 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     </div>
                   </div>
                 </div>
+
+                {/* Outcome sub-list for discovery mode */}
+                {appMode === "discovery" && a.id === activeId && (
+                  <div className="mx-2 mb-1">
+                    {/* Active outcomes */}
+                    {(a.outcomes || []).filter((o) => o.status === "active").map((o) => (
+                      <div
+                        key={o.id}
+                        onClick={(e) => { e.stopPropagation(); switchOutcome(o.id); }}
+                        className={`ml-4 px-2.5 py-1.5 rounded-md cursor-pointer group/outcome flex items-center gap-2 transition-colors ${
+                          o.id === a.activeOutcomeId
+                            ? "bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        }`}
+                      >
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-500"}`} />
+                        <span className={`text-xs flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>{o.name}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); archiveOutcome(o.id); }}
+                          className="text-slate-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 opacity-0 group-hover/outcome:opacity-100 transition-opacity"
+                          title="Archive outcome"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Archived outcomes toggle */}
+                    {(a.outcomes || []).some((o) => o.status === "archived") && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowArchivedOutcomes(!showArchivedOutcomes); }}
+                          className="ml-4 px-2.5 py-1 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          {showArchivedOutcomes ? "Hide" : "Show"} archived ({(a.outcomes || []).filter((o) => o.status === "archived").length})
+                        </button>
+                        {showArchivedOutcomes && (a.outcomes || []).filter((o) => o.status === "archived").map((o) => (
+                          <div
+                            key={o.id}
+                            className="ml-4 px-2.5 py-1.5 rounded-md flex items-center gap-2 opacity-50"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600" />
+                            <span className="text-xs flex-1 truncate text-slate-400 dark:text-slate-500 line-through">{o.name}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* + New Outcome button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardStep(1); setOutcomeWizardName(""); setOutcomeWizardConfirmed(false); }}
+                      className="ml-4 px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors w-full text-left"
+                    >
+                      + New Outcome
+                    </button>
+
+
+                  </div>
+                )}
+                </div>
               );
             })}
             {filteredAnalyses.length === 0 && (
@@ -7069,12 +7501,12 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             )}
           </div>
           <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
-            {/* New Design Task Button */}
+            {/* New Design Task / Discovery Button */}
             <button
               onClick={createNew}
               className="w-full py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors font-medium"
             >
-              + New design task
+              {appMode === "discovery" ? "+ New discovery project" : "+ New design task"}
             </button>
             
             {/* Export Options Section */}
@@ -7138,7 +7570,113 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
                     title="Cloud backup: Saves your active task to GitHub as a private gist. Share the Gist ID with others to let them import a copy. Changes don't auto-sync between people - each save/load creates an independent snapshot."
                   >
-                    GitHub Sync {gistExpanded ? "⌄" : "⌃"}
+                    GitHub Gist {gistExpanded ? "⌄" : "⌃"}
+                  </button>
+                )}
+                
+                {/* GitHub Repository Sync (Option 2 - Persistent Storage) */}
+                {!active?.secureMode && githubRepoExpanded && (
+                  <div className="space-y-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 p-2 bg-blue-50 dark:bg-slate-700 rounded">
+                      💾 <strong>Auto-saves all analyses</strong> to your GitHub repository with version history
+                    </div>
+                    
+                    {/* GitHub Token */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">GitHub Token</label>
+                      <input
+                        type="password"
+                        placeholder="ghp_..."
+                        value={githubToken}
+                        onChange={(e) => setGithubToken(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                      <a
+                        href="https://github.com/settings/tokens/new?description=Requirement%20Analyzer&scopes=repo"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline mt-1 inline-block"
+                      >
+                        Create token (needs 'repo' scope)
+                      </a>
+                    </div>
+                    
+                    {/* Repository Owner */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">Repository Owner</label>
+                      <input
+                        type="text"
+                        placeholder="your-username or organization"
+                        value={githubRepoOwner}
+                        onChange={(e) => setGithubRepoOwner(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                    </div>
+                    
+                    {/* Repository Name */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">Repository Name</label>
+                      <input
+                        type="text"
+                        placeholder="my-requirements-data"
+                        value={githubRepoName}
+                        onChange={(e) => setGithubRepoName(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                    </div>
+                    
+                    {/* Branch Name */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-200 mb-1 block font-medium">Branch Name</label>
+                      <input
+                        type="text"
+                        placeholder="data"
+                        value={githubRepoBranch}
+                        onChange={(e) => setGithubRepoBranch(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Data will be stored in a separate branch</p>
+                    </div>
+                    
+                    {/* Sync Status */}
+                    {githubSyncStatus && (
+                      <div className={`text-xs p-2 rounded ${
+                        githubSyncStatus.status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
+                        githubSyncStatus.status === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' :
+                        githubSyncStatus.status === 'saving' || githubSyncStatus.status === 'loading' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :
+                        'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {githubSyncStatus.message}
+                      </div>
+                    )}
+                    
+                    {/* Manual Save/Load Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveToGitHub}
+                        disabled={!githubSyncRef.current?.isConfigured()}
+                        className="flex-1 py-2.5 text-sm text-white bg-slate-800 dark:bg-slate-600 hover:bg-slate-700 dark:hover:bg-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      >
+                        Save Now
+                      </button>
+                      <button
+                        onClick={handleLoadFromGitHub}
+                        disabled={!githubSyncRef.current?.isConfigured()}
+                        className="flex-1 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded hover:border-slate-400 dark:hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {!active?.secureMode && (
+                  <button
+                    onClick={() => setGithubRepoExpanded(!githubRepoExpanded)}
+                    className="w-full py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors flex items-center justify-center gap-1"
+                    title="Persistent storage: Auto-saves all your analyses to a GitHub repository with full version history. Perfect for team collaboration and backup."
+                  >
+                    GitHub Repository Sync {githubRepoExpanded ? "⌄" : "⌃"}
                   </button>
                 )}
                 
@@ -7197,21 +7735,23 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex gap-1">
-                <button
-                  onClick={() => setRightPanelTab("actions")}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    rightPanelTab === "actions"
-                      ? "bg-slate-800 dark:bg-slate-600 text-white"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {(TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.actions}
-                </button>
+                {appMode !== "discovery" && (
+                  <button
+                    onClick={() => setRightPanelTab("actions")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                      rightPanelTab === "actions"
+                        ? "bg-slate-800 dark:bg-slate-600 text-white"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    {(TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.actions}
+                  </button>
+                )}
                 {!active?.secureMode && (
                   <button
                     onClick={() => setRightPanelTab("chat")}
                     className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      rightPanelTab === "chat"
+                      rightPanelTab === "chat" || appMode === "discovery"
                         ? "bg-slate-800 dark:bg-slate-600 text-white"
                         : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                     }`}
@@ -7219,7 +7759,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    {(TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.title}
+                    {appMode === "discovery" ? "Discovery AI" : (TRANSLATIONS[active?.language] || TRANSLATIONS.en).chat.title}
                   </button>
                 )}
               </div>
@@ -7230,7 +7770,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
               </button>
             </div>
           </div>
-          {rightPanelTab === "actions" ? (
+          {rightPanelTab === "actions" && appMode !== "discovery" ? (
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <ActionsSection data={active.actions || []} onChange={(v) => updateActive("actions", v)} />
             </div>
@@ -7339,6 +7879,103 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           </div>
         </div>
       )}
+
+      {/* Outcome Creation Wizard Modal */}
+      {outcomeWizardOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-8" onClick={() => setOutcomeWizardOpen(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                {outcomeWizardStep === 1 ? "New Outcome" : "Confirm New Outcome"}
+              </h3>
+              <button onClick={() => setOutcomeWizardOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
+            </div>
+            <div className="px-6 py-5">
+              {outcomeWizardStep === 1 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    An outcome defines a desired result. Each outcome gets its own discovery table and opportunity tree.
+                  </p>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block mb-1">Outcome name</label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={outcomeWizardName}
+                      onChange={(e) => setOutcomeWizardName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && outcomeWizardName.trim()) setOutcomeWizardStep(2); }}
+                      placeholder="e.g. Reduce task completion time for admins"
+                      className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              )}
+              {outcomeWizardStep === 2 && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">This requires fresh analysis work</p>
+                    <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 list-disc pl-4">
+                      <li>Creating a new outcome starts with an empty discovery table</li>
+                      <li>You'll need to re-analyse source documents through the lens of this new outcome</li>
+                      <li>This ensures each outcome has focused, relevant opportunities</li>
+                    </ul>
+                  </div>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={outcomeWizardConfirmed}
+                      onChange={(e) => setOutcomeWizardConfirmed(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">I understand this requires fresh analysis work</span>
+                  </label>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-between">
+              {outcomeWizardStep === 2 && (
+                <button
+                  onClick={() => setOutcomeWizardStep(1)}
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  Back
+                </button>
+              )}
+              <div className="ml-auto flex gap-2">
+                <button
+                  onClick={() => setOutcomeWizardOpen(false)}
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                {outcomeWizardStep === 1 && (
+                  <button
+                    onClick={() => setOutcomeWizardStep(2)}
+                    disabled={!outcomeWizardName.trim()}
+                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                )}
+                {outcomeWizardStep === 2 && (
+                  <button
+                    onClick={() => {
+                      addOutcome(outcomeWizardName.trim());
+                      setOutcomeWizardOpen(false);
+                      setActiveSection("discoveryTable");
+                    }}
+                    disabled={!outcomeWizardConfirmed}
+                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Create Outcome
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );
