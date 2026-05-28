@@ -48,7 +48,7 @@ export default async function handler(req, res) {
       }
 
       for (const p of projects) {
-        const dataJson = JSON.stringify(p);
+        const dataJson = JSON.stringify(p.data || p);
         await sql`
           INSERT INTO projects (id, name, data, updated_at, updated_by)
           VALUES (${p.id}, ${p.name || 'Untitled'}, ${dataJson}::jsonb, NOW(), ${p.updated_by || null})
