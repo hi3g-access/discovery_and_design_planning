@@ -9,8 +9,8 @@ const VERTICAL_GAP = 200;
 
 // Color mapping for node types
 const NODE_COLORS = {
-  outcome: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e", tldraw: "yellow" },
-  opportunity: { bg: "#f3e8ff", border: "#a855f7", text: "#6b21a8", tldraw: "violet" },
+  outcome: { bg: "#f3e8ff", border: "#a855f7", text: "#6b21a8", tldraw: "violet" },
+  opportunity: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e", tldraw: "yellow" },
   solution: { bg: "#dcfce7", border: "#22c55e", text: "#166534", tldraw: "green" },
   experiment: { bg: "#e0f2fe", border: "#0ea5e9", text: "#075985", tldraw: "blue" },
 };

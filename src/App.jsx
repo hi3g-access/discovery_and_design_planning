@@ -7341,12 +7341,12 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                         onClick={(e) => { e.stopPropagation(); switchOutcome(o.id); }}
                         className={`ml-4 px-2.5 py-1.5 rounded-md cursor-pointer group/outcome flex items-center gap-2 transition-colors ${
                           o.id === a.activeOutcomeId
-                            ? "bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700"
+                            ? "bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600"
                             : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         }`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-500"}`} />
-                        <span className={`text-xs flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>{o.name}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-slate-900 dark:bg-slate-400" : "bg-slate-300 dark:bg-slate-500"}`} />
+                        <span className={`text-xs flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-slate-900 dark:text-slate-200" : "text-slate-600 dark:text-slate-400"}`}>{o.name}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); archiveOutcome(o.id); }}
                           className="text-slate-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 opacity-0 group-hover/outcome:opacity-100 transition-opacity"
@@ -7383,7 +7383,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     {/* + New Outcome button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardStep(1); setOutcomeWizardName(""); setOutcomeWizardConfirmed(false); }}
-                      className="ml-4 px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors w-full text-left"
+                      className="ml-4 px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors w-full text-left"
                     >
                       + New Outcome
                     </button>
