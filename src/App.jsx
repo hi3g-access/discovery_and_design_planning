@@ -4978,13 +4978,13 @@ const AudioAnalysisModal = ({
 // --- Mode Switcher (Segmented Control) ---
 const ModeSwitch = ({ mode, onChange }) => {
   return (
-    <div className="inline-flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
+    <div className="inline-flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg p-1.5 gap-1.5 border-2 border-slate-300 dark:border-slate-600">
       <button
         onClick={() => onChange("discovery")}
-        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+        className={`px-5 py-2.5 text-base font-semibold rounded-md transition-all whitespace-nowrap ${
           mode === "discovery"
-            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
-            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-900 dark:border-slate-100"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border-2 border-transparent"
         }`}
         aria-pressed={mode === "discovery"}
       >
@@ -4992,14 +4992,14 @@ const ModeSwitch = ({ mode, onChange }) => {
       </button>
       <button
         onClick={() => onChange("design-specs")}
-        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+        className={`px-5 py-2.5 text-base font-semibold rounded-md transition-all whitespace-nowrap ${
           mode === "design-specs"
-            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
-            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-900 dark:border-slate-100"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border-2 border-transparent"
         }`}
         aria-pressed={mode === "design-specs"}
       >
-        Design Specs
+        Design
       </button>
     </div>
   );
@@ -5293,7 +5293,7 @@ export default function RequirementAnalyzer() {
   const [activeId, setActiveId] = useState(() => analyses[0]?.id);
   const [activeSection, setActiveSection] = useState(() => {
     const saved = localStorage.getItem("activeSection");
-    return saved || "overview";
+    return saved || "discoveryTable";
   });
   const [showExport, setShowExport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -7098,14 +7098,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {/* Top bar - spans full width */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3">
         <div className="flex flex-col gap-3">
-          {/* Row 1: Sidebar toggle + Name + Mode Switcher + controls */}
+          {/* Row 1: Mode Switcher + controls */}
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className={`p-1.5 rounded-md transition-colors ${sidebarOpen ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`} title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={2} />
-                <rect x="14" y="3" width="7" height="18" rx="1" strokeWidth={2} />
-              </svg>
-            </button>
             <ModeSwitch 
               mode={appMode} 
               onChange={(newMode) => {
@@ -7128,19 +7122,19 @@ Be concise and actionable. Respond in the same language the user writes in.`;
               }} 
             />
             <div className="flex items-center gap-2 ml-auto shrink-0">
-              {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
-                {appMode !== "discovery" && (
-                  <>
-                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
-                        style={{ width: `${completion}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
-                  </>
-                )}
-                <button
+              <div className={appMode === "discovery" ? "opacity-0 pointer-events-none" : ""}>
+                {active.phase && <VersionBadge version={active.phase} />}
+              </div>
+              <div className={`flex items-center gap-2 ${appMode === "discovery" ? "opacity-0 pointer-events-none" : ""}`}>
+                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
+                    style={{ width: `${completion}%` }}
+                  />
+                </div>
+                <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+              </div>
+              <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
                   title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
@@ -7182,6 +7176,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 </button>
             </div>
           </div>
+          {/* Visual separator between main tabs and sub-tabs */}
+          <div className="border-t border-slate-200 dark:border-slate-700"></div>
           {/* Row 2: Section nav pills */}
           <div className="flex gap-1 flex-wrap items-center">
             {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
