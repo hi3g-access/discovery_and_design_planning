@@ -5125,9 +5125,9 @@ const DiscoveryTableSection = ({ data, outcomeName, onChange }) => {
     <div>
       {outcomeName && (
         <div className="mb-4 px-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Outcome:</span>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{outcomeName}</span>
+            <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{outcomeName}</span>
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Track opportunities, priorities, and evidence for informed decision-making.</p>
         </div>
