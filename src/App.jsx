@@ -204,7 +204,11 @@ const TRANSLATIONS = {
       codeRefs: "Code References",
       design: "Design System",
       research: "User Research",
-      wireframe: "Structure"
+      wireframe: "Structure",
+      discoveryTable: "Opportunity Solutions",
+      opportunityTree: "Diagram",
+      sourceDocuments: "Research Data",
+      feedback: "Feedback"
     },
     fields: {
       featureName: "Feature Name",
@@ -266,7 +270,11 @@ const TRANSLATIONS = {
       codeRefs: "Kode Referencer",
       design: "Design System",
       research: "Brugerundersøgelse",
-      wireframe: "Struktur"
+      wireframe: "Struktur",
+      discoveryTable: "Muligheder",
+      opportunityTree: "Diagram",
+      sourceDocuments: "Forskningsdata",
+      feedback: "Feedback"
     },
     fields: {
       featureName: "Funktionsnavn",
@@ -328,7 +336,11 @@ const TRANSLATIONS = {
       codeRefs: "Kodreferenser",
       design: "Design System",
       research: "Användarforskning",
-      wireframe: "Struktur"
+      wireframe: "Struktur",
+      discoveryTable: "Möjligheter",
+      opportunityTree: "Diagram",
+      sourceDocuments: "Forskningsdata",
+      feedback: "Feedback"
     },
     fields: {
       featureName: "Funktionsnamn",
@@ -394,13 +406,13 @@ const SECTIONS = [
 ];
 
 const DISCOVERY_SECTIONS = [
-  { id: "discoveryTable", label: "Discovery Research", icon: "◫" },
-  { id: "opportunityTree", label: "Opportunity Solution Tree", icon: "◆" },
+  { id: "discoveryTable", label: "Opportunity Solutions", icon: "◫" },
+  { id: "opportunityTree", label: "Diagram", icon: "◆" },
 ];
 
 const DISCOVERY_SECTIONS_RIGHT = [
-  { id: "sourceDocuments", label: "Source Documents", icon: "◉" },
-  { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
+  { id: "sourceDocuments", label: "Research Data" },
+  { id: "feedback", label: "Feedback" },
 ];
 
 const ORIGIN_OPTIONS = [
@@ -7213,7 +7225,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             })}
             {appMode === "discovery" && (
               <>
-                <div className="ml-auto" />
+                <div className="mx-3 h-6 border-l border-slate-300 dark:border-slate-600" />
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium px-2 flex items-center">DATA SOURCES:</span>
                 {DISCOVERY_SECTIONS_RIGHT.map((s) => {
                   const lang = active.language || "en";
                   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
@@ -7223,7 +7236,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                       active={activeSection === s.id}
                       onClick={() => setActiveSection(s.id)}
                     >
-                      <span className="mr-1 opacity-60">{s.icon}</span>
                       {t.sections[s.id] || s.label}
                     </Pill>
                   );
