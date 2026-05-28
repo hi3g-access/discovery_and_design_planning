@@ -5896,6 +5896,19 @@ Be concise and actionable. Respond in the same language the user writes in.`;
     }));
   }, [active, updateActive]);
 
+  // Auto-trigger discovery analysis when opening Discovery AI panel with an active outcome
+  useEffect(() => {
+    if (appMode === "discovery" && actionsPanelOpen && activeOutcome && chatMessages.length === 0 && !chatLoading && githubAIKey) {
+      // Only auto-trigger if there's research data available
+      const hasResearchData = active?.sourceDocuments && active.sourceDocuments.length > 0;
+      if (hasResearchData) {
+        // Auto-send initial analysis request
+        const initialPrompt = "Based on the available research data, what are the top three customer opportunities related to this outcome?";
+        sendChatMessage(initialPrompt);
+      }
+    }
+  }, [appMode, actionsPanelOpen, activeOutcome, chatMessages.length, chatLoading, githubAIKey, active?.sourceDocuments, sendChatMessage]);
+
   const createNew = () => {
     const newA = createBlankAnalysis(appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task", appMode);
     setAnalyses((prev) => [newA, ...prev]);
