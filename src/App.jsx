@@ -400,7 +400,7 @@ const DISCOVERY_SECTIONS = [
 
 const DISCOVERY_SECTIONS_RIGHT = [
   { id: "sourceDocuments", label: "Research Data", icon: "◉" },
-  { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
+  { id: "feedback", label: "Feedback", icon: "◈" },
 ];
 
 const ORIGIN_OPTIONS = [
