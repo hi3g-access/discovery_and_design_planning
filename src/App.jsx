@@ -5129,7 +5129,6 @@ const DiscoveryTableSection = ({ data, outcomeName, onChange }) => {
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Outcome:</span>
             <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{outcomeName}</span>
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Track opportunities, priorities, and evidence for informed decision-making.</p>
         </div>
       )}
       <div className="flex items-center justify-end mb-4">
@@ -7333,20 +7332,20 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
                 {/* Outcome sub-list for discovery mode */}
                 {appMode === "discovery" && a.id === activeId && (
-                  <div className="mx-2 mb-1">
+                  <div className="mx-2 mb-1 space-y-1">
                     {/* Active outcomes */}
                     {(a.outcomes || []).filter((o) => o.status === "active").map((o) => (
                       <div
                         key={o.id}
                         onClick={(e) => { e.stopPropagation(); switchOutcome(o.id); }}
-                        className={`ml-4 px-2.5 py-1.5 rounded-md cursor-pointer group/outcome flex items-center gap-2 transition-colors ${
+                        className={`ml-4 px-3 py-2.5 rounded-md cursor-pointer group/outcome flex items-center gap-2.5 transition-colors ${
                           o.id === a.activeOutcomeId
                             ? "bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600"
                             : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         }`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-slate-900 dark:bg-slate-400" : "bg-slate-300 dark:bg-slate-500"}`} />
-                        <span className={`text-xs flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-slate-900 dark:text-slate-200" : "text-slate-600 dark:text-slate-400"}`}>{o.name}</span>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-slate-900 dark:bg-slate-400" : "bg-slate-300 dark:bg-slate-500"}`} />
+                        <span className={`text-base flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-slate-900 dark:text-slate-100" : "text-slate-700 dark:text-slate-300"}`}>{o.name}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); archiveOutcome(o.id); }}
                           className="text-slate-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 opacity-0 group-hover/outcome:opacity-100 transition-opacity"
@@ -7364,17 +7363,17 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowArchivedOutcomes(!showArchivedOutcomes); }}
-                          className="ml-4 px-2.5 py-1 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          className="ml-4 px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                         >
                           {showArchivedOutcomes ? "Hide" : "Show"} archived ({(a.outcomes || []).filter((o) => o.status === "archived").length})
                         </button>
                         {showArchivedOutcomes && (a.outcomes || []).filter((o) => o.status === "archived").map((o) => (
                           <div
                             key={o.id}
-                            className="ml-4 px-2.5 py-1.5 rounded-md flex items-center gap-2 opacity-50"
+                            className="ml-4 px-3 py-2.5 rounded-md flex items-center gap-2.5 opacity-50"
                           >
-                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600" />
-                            <span className="text-xs flex-1 truncate text-slate-400 dark:text-slate-500 line-through">{o.name}</span>
+                            <div className="w-2 h-2 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600" />
+                            <span className="text-base flex-1 truncate text-slate-500 dark:text-slate-400 line-through">{o.name}</span>
                           </div>
                         ))}
                       </>
@@ -7382,8 +7381,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
                     {/* + New Outcome button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardStep(1); setOutcomeWizardName(""); setOutcomeWizardConfirmed(false); }}
-                      className="ml-4 px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors w-full text-left"
+                      onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardName(""); }}
+                      className="ml-4 px-3 py-2.5 text-base text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors w-full text-left"
                     >
                       + New Outcome
                     </button>
@@ -7408,6 +7407,9 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             >
               {appMode === "discovery" ? "+ New discovery project" : "+ New design task"}
             </button>
+            
+            {/* Divider */}
+            <div className="border-t border-slate-100 dark:border-slate-700 -mx-4"></div>
             
             {/* Export Options Section */}
             {syncOptionsExpanded && (
@@ -7798,91 +7800,53 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="font-semibold text-slate-800 dark:text-slate-200">
-                {outcomeWizardStep === 1 ? "New Outcome" : "Confirm New Outcome"}
+                New Outcome
               </h3>
               <button onClick={() => setOutcomeWizardOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
             </div>
             <div className="px-6 py-5">
-              {outcomeWizardStep === 1 && (
-                <div className="space-y-4">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    An outcome defines a desired result. Each outcome gets its own discovery table and opportunity tree.
-                  </p>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block mb-1">Outcome name</label>
-                    <input
-                      type="text"
-                      autoFocus
-                      value={outcomeWizardName}
-                      onChange={(e) => setOutcomeWizardName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && outcomeWizardName.trim()) setOutcomeWizardStep(2); }}
-                      placeholder="e.g. Reduce task completion time for admins"
-                      className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              )}
-              {outcomeWizardStep === 2 && (
-                <div className="space-y-4">
-                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">This requires fresh analysis work</p>
-                    <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 list-disc pl-4">
-                      <li>Creating a new outcome starts with an empty discovery table</li>
-                      <li>You'll need to re-analyse research data through the lens of this new outcome</li>
-                      <li>This ensures each outcome has focused, relevant opportunities</li>
-                    </ul>
-                  </div>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={outcomeWizardConfirmed}
-                      onChange={(e) => setOutcomeWizardConfirmed(e.target.checked)}
-                      className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">I understand this requires fresh analysis work</span>
-                  </label>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-between">
-              {outcomeWizardStep === 2 && (
-                <button
-                  onClick={() => setOutcomeWizardStep(1)}
-                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-                >
-                  Back
-                </button>
-              )}
-              <div className="ml-auto flex gap-2">
-                <button
-                  onClick={() => setOutcomeWizardOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                {outcomeWizardStep === 1 && (
-                  <button
-                    onClick={() => setOutcomeWizardStep(2)}
-                    disabled={!outcomeWizardName.trim()}
-                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                )}
-                {outcomeWizardStep === 2 && (
-                  <button
-                    onClick={() => {
-                      addOutcome(outcomeWizardName.trim());
-                      setOutcomeWizardOpen(false);
-                      setActiveSection("discoveryTable");
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  An outcome defines a desired result. Each outcome gets its own discovery table and opportunity tree.
+                </p>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block mb-1">Outcome name</label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={outcomeWizardName}
+                    onChange={(e) => setOutcomeWizardName(e.target.value)}
+                    onKeyDown={(e) => { 
+                      if (e.key === "Enter" && outcomeWizardName.trim()) {
+                        addOutcome(outcomeWizardName.trim());
+                        setOutcomeWizardOpen(false);
+                        setActiveSection("discoveryTable");
+                      }
                     }}
-                    disabled={!outcomeWizardConfirmed}
-                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Create Outcome
-                  </button>
-                )}
+                    placeholder="e.g. Reduce task completion time for admins"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
+                  />
+                </div>
               </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+              <button
+                onClick={() => setOutcomeWizardOpen(false)}
+                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  addOutcome(outcomeWizardName.trim());
+                  setOutcomeWizardOpen(false);
+                  setActiveSection("discoveryTable");
+                }}
+                disabled={!outcomeWizardName.trim()}
+                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Outcome
+              </button>
             </div>
           </div>
         </div>
