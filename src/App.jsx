@@ -1450,7 +1450,7 @@ const SectionHeader = ({ title, description }) => (
 
 // --- Section Components ---
 
-const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, audioModalOpen, pasteModalOpen, onChange, onPhaseChange, onJiraTicketChange, onSecureModeChange, onLanguageChange, onOpenAudioModal, onOpenPasteModal }) => {
+const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, projectMode, audioModalOpen, pasteModalOpen, onChange, onPhaseChange, onJiraTicketChange, onSecureModeChange, onLanguageChange, onOpenAudioModal, onOpenPasteModal }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   
   return (
@@ -1543,29 +1543,31 @@ const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, audioM
     {data.origin === "Other" && (
       <Field label="Specify Other Origin" value={data.originOther} onChange={(v) => onChange({ ...data, originOther: v })} />
     )}
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.fields.targetVersion}</label>
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Which release phase is this analysis targeting?</p>
-      <div className="flex gap-2 flex-wrap">
-        {VERSION_PHASES.filter((v) => v !== "Cut").map((v) => {
-          const colors = VERSION_COLORS[v];
-          const isActive = phase === v;
-          return (
-            <button
-              key={v}
-              onClick={() => onPhaseChange(isActive ? "" : v)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
-                isActive
-                  ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-slate-300`
-                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              {v}
-            </button>
-          );
-        })}
+    {projectMode === "design-specs" && (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.fields.targetVersion}</label>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Which release phase is this analysis targeting?</p>
+        <div className="flex gap-2 flex-wrap">
+          {VERSION_PHASES.filter((v) => v !== "Cut").map((v) => {
+            const colors = VERSION_COLORS[v];
+            const isActive = phase === v;
+            return (
+              <button
+                key={v}
+                onClick={() => onPhaseChange(isActive ? "" : v)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                  isActive
+                    ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-slate-300`
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {v}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    )}
     <Field label={t.fields.description} hint="What is this feature in one or two sentences?" multiline value={data.description} onChange={(v) => onChange({ ...data, description: v })} />
   </div>
   );
@@ -7045,6 +7047,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
         jiraTicket={active.jiraTicket} 
         secureMode={active.secureMode || false}
         language={lang}
+        projectMode={active.projectMode || "design-specs"}
         audioModalOpen={audioModalOpen}
         pasteModalOpen={pasteModalOpen}
         onChange={(v) => {
@@ -7236,32 +7239,34 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {sidebarOpen && (
         <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
 
-          {/* Phase filter */}
-          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-            <div className="flex gap-1 flex-wrap">
-              {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
-                const count = phaseCounts[f] || 0;
-                if (f !== "All" && count === 0) return null;
-                const isActive = phaseFilter === f;
-                const colors = VERSION_COLORS[f];
-                return (
-                  <button
-                    key={f}
-                    onClick={() => setPhaseFilter(f)}
-                    className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                      isActive
-                        ? colors
-                          ? `${colors.bg} ${colors.text} font-medium`
-                          : "bg-slate-800 text-white font-medium"
-                        : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-                    }`}
-                  >
-                    {f} {count > 0 && <span className="opacity-60">{count}</span>}
-                  </button>
-                );
-              })}
+          {/* Phase filter - only show in design mode */}
+          {appMode === "design-specs" && (
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex gap-1 flex-wrap">
+                {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
+                  const count = phaseCounts[f] || 0;
+                  if (f !== "All" && count === 0) return null;
+                  const isActive = phaseFilter === f;
+                  const colors = VERSION_COLORS[f];
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setPhaseFilter(f)}
+                      className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                        isActive
+                          ? colors
+                            ? `${colors.bg} ${colors.text} font-medium`
+                            : "bg-slate-800 text-white font-medium"
+                          : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                      }`}
+                    >
+                      {f} {count > 0 && <span className="opacity-60">{count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex-1 overflow-y-auto py-2">
             {filteredAnalyses.map((a) => {
@@ -7315,7 +7320,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                           </svg>
                         </div>
                       )}
-                      {a.phase && <VersionBadge version={a.phase} size="xs" />}
+                      {appMode === "design-specs" && a.phase && <VersionBadge version={a.phase} size="xs" />}
                       {analyses.length > 1 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
