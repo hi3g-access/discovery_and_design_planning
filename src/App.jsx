@@ -399,8 +399,8 @@ const DISCOVERY_SECTIONS = [
 ];
 
 const DISCOVERY_SECTIONS_RIGHT = [
-  { id: "sourceDocuments", label: "Research Data", icon: "◉" },
-  { id: "feedback", label: "Feedback", icon: "◈" },
+  { id: "sourceDocuments", label: "Source Documents", icon: "◉" },
+  { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
 ];
 
 const ORIGIN_OPTIONS = [
@@ -1360,7 +1360,7 @@ const AutoResizeTextarea = ({ value, onChange, rows, className, placeholder }) =
     const el = ref.current;
     if (el) {
       el.style.height = 'auto';
-      const minHeight = rows * 28; // ~28px per row for larger text
+      const minHeight = rows * 24; // ~24px per row
       el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
     }
   }, [value, rows]);
@@ -1372,25 +1372,25 @@ const AutoResizeTextarea = ({ value, onChange, rows, className, placeholder }) =
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      style={{ overflow: 'hidden', lineHeight: '1.6' }}
+      style={{ overflow: 'hidden' }}
     />
   );
 };
 
 const Field = ({ label, hint, placeholder, value, onChange, multiline = false, rows = 3 }) => (
-  <div className="mb-5">
-    <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
-    {hint && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">{hint}</p>}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+    {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{hint}</p>}
     {multiline ? (
       <AutoResizeTextarea
-        className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
         rows={rows} value={value || ""} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
     ) : (
       <input
         type="text"
-        className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
         value={value || ""} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
@@ -1399,11 +1399,11 @@ const Field = ({ label, hint, placeholder, value, onChange, multiline = false, r
 );
 
 const Select = ({ label, hint, value, options, onChange, allowEmpty = true }) => (
-  <div className="mb-5">
-    <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
-    {hint && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">{hint}</p>}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+    {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{hint}</p>}
     <select
-      className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
       value={value || ""} onChange={(e) => onChange(e.target.value)}
     >
       {allowEmpty && <option value="">Select...</option>}
@@ -1442,15 +1442,15 @@ const Pill = ({ active, onClick, children, completion, count }) => (
 );
 
 const SectionHeader = ({ title, description }) => (
-  <div className="mb-8 pb-5 border-b border-slate-100 dark:border-slate-700">
-    <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-200 leading-tight">{title}</h2>
-    {description && <p className="text-base text-slate-600 dark:text-slate-400 mt-3 leading-relaxed max-w-prose">{description}</p>}
+  <div className="mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
+    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
+    {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>}
   </div>
 );
 
 // --- Section Components ---
 
-const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, projectMode, audioModalOpen, pasteModalOpen, onChange, onPhaseChange, onJiraTicketChange, onSecureModeChange, onLanguageChange, onOpenAudioModal, onOpenPasteModal }) => {
+const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, audioModalOpen, pasteModalOpen, onChange, onPhaseChange, onJiraTicketChange, onSecureModeChange, onLanguageChange, onOpenAudioModal, onOpenPasteModal }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   
   return (
@@ -1543,31 +1543,29 @@ const OverviewSection = ({ data, phase, jiraTicket, secureMode, language, projec
     {data.origin === "Other" && (
       <Field label="Specify Other Origin" value={data.originOther} onChange={(v) => onChange({ ...data, originOther: v })} />
     )}
-    {projectMode === "design-specs" && (
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.fields.targetVersion}</label>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Which release phase is this analysis targeting?</p>
-        <div className="flex gap-2 flex-wrap">
-          {VERSION_PHASES.filter((v) => v !== "Cut").map((v) => {
-            const colors = VERSION_COLORS[v];
-            const isActive = phase === v;
-            return (
-              <button
-                key={v}
-                onClick={() => onPhaseChange(isActive ? "" : v)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
-                  isActive
-                    ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-slate-300`
-                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                {v}
-              </button>
-            );
-          })}
-        </div>
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.fields.targetVersion}</label>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Which release phase is this analysis targeting?</p>
+      <div className="flex gap-2 flex-wrap">
+        {VERSION_PHASES.filter((v) => v !== "Cut").map((v) => {
+          const colors = VERSION_COLORS[v];
+          const isActive = phase === v;
+          return (
+            <button
+              key={v}
+              onClick={() => onPhaseChange(isActive ? "" : v)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                isActive
+                  ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-slate-300`
+                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              {v}
+            </button>
+          );
+        })}
       </div>
-    )}
+    </div>
     <Field label={t.fields.description} hint="What is this feature in one or two sentences?" multiline value={data.description} onChange={(v) => onChange({ ...data, description: v })} />
   </div>
   );
@@ -4980,13 +4978,13 @@ const AudioAnalysisModal = ({
 // --- Mode Switcher (Segmented Control) ---
 const ModeSwitch = ({ mode, onChange }) => {
   return (
-    <div className="inline-flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg p-1.5 gap-1.5 border-2 border-slate-300 dark:border-slate-600">
+    <div className="inline-flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
       <button
         onClick={() => onChange("discovery")}
-        className={`px-5 py-2.5 text-base font-semibold rounded-md transition-all whitespace-nowrap ${
+        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
           mode === "discovery"
-            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-900 dark:border-slate-100"
-            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border-2 border-transparent"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
         }`}
         aria-pressed={mode === "discovery"}
       >
@@ -4994,14 +4992,14 @@ const ModeSwitch = ({ mode, onChange }) => {
       </button>
       <button
         onClick={() => onChange("design-specs")}
-        className={`px-5 py-2.5 text-base font-semibold rounded-md transition-all whitespace-nowrap ${
+        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
           mode === "design-specs"
-            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-900 dark:border-slate-100"
-            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border-2 border-transparent"
+            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
         }`}
         aria-pressed={mode === "design-specs"}
       >
-        Design
+        Design Specs
       </button>
     </div>
   );
@@ -5125,10 +5123,11 @@ const DiscoveryTableSection = ({ data, outcomeName, onChange }) => {
     <div>
       {outcomeName && (
         <div className="mb-4 px-1">
-          <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Outcome:</span>
-            <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{outcomeName}</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{outcomeName}</span>
           </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Track opportunities, priorities, and evidence for informed decision-making.</p>
         </div>
       )}
       <div className="flex items-center justify-end mb-4">
@@ -5294,7 +5293,7 @@ export default function RequirementAnalyzer() {
   const [activeId, setActiveId] = useState(() => analyses[0]?.id);
   const [activeSection, setActiveSection] = useState(() => {
     const saved = localStorage.getItem("activeSection");
-    return saved || "discoveryTable";
+    return saved || "overview";
   });
   const [showExport, setShowExport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -5763,10 +5762,10 @@ You must NOT help with unrelated topics. If the user asks about something outsid
 Current outcome: ${outcomeContext ? outcomeContext.outcomeName : "(none selected)"}
 Discovery project: "${active?.name || "Untitled"}"
 
-Available research data (user research interview transcripts):
+Available source documents (user research interview transcripts):
 - DK — Enreach, DK — Jettime, DK — Visma (Denmark market)
 - SE — Ambea, SE — Bico, SE — Carla, SE — FedEx, SE — Investor (Sweden market)
-These are customer interview transcripts accessible via the "Research Data" tab. Reference them when suggesting research-backed opportunities.
+These are customer interview transcripts accessible via the "Source Documents" tab. Reference them when suggesting research-backed opportunities.
 
 ${outcomeContext ? `Current discovery table data:
 ${JSON.stringify(outcomeContext.discoveryTable, null, 2)}
@@ -5895,19 +5894,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       return { ...msg, proposals: newProposals };
     }));
   }, [active, updateActive]);
-
-  // Auto-trigger discovery analysis when opening Discovery AI panel with an active outcome
-  useEffect(() => {
-    if (appMode === "discovery" && actionsPanelOpen && activeOutcome && chatMessages.length === 0 && !chatLoading && githubAIKey) {
-      // Only auto-trigger if there's research data available
-      const hasResearchData = active?.sourceDocuments && active.sourceDocuments.length > 0;
-      if (hasResearchData) {
-        // Auto-send initial analysis request
-        const initialPrompt = "Based on the available research data, what are the top three customer opportunities related to this outcome?";
-        sendChatMessage(initialPrompt);
-      }
-    }
-  }, [appMode, actionsPanelOpen, activeOutcome, chatMessages.length, chatLoading, githubAIKey, active?.sourceDocuments, sendChatMessage]);
 
   const createNew = () => {
     const newA = createBlankAnalysis(appMode === "discovery" ? "Untitled Discovery" : "Untitled Design Task", appMode);
@@ -7059,7 +7045,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
         jiraTicket={active.jiraTicket} 
         secureMode={active.secureMode || false}
         language={lang}
-        projectMode={active.projectMode || "design-specs"}
         audioModalOpen={audioModalOpen}
         pasteModalOpen={pasteModalOpen}
         onChange={(v) => {
@@ -7113,8 +7098,14 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {/* Top bar - spans full width */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3">
         <div className="flex flex-col gap-3">
-          {/* Row 1: Mode Switcher + controls */}
+          {/* Row 1: Sidebar toggle + Name + Mode Switcher + controls */}
           <div className="flex items-center gap-4">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className={`p-1.5 rounded-md transition-colors ${sidebarOpen ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`} title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+                <rect x="14" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+              </svg>
+            </button>
             <ModeSwitch 
               mode={appMode} 
               onChange={(newMode) => {
@@ -7137,19 +7128,19 @@ Be concise and actionable. Respond in the same language the user writes in.`;
               }} 
             />
             <div className="flex items-center gap-2 ml-auto shrink-0">
-              <div className={appMode === "discovery" ? "opacity-0 pointer-events-none" : ""}>
-                {active.phase && <VersionBadge version={active.phase} />}
-              </div>
-              <div className={`flex items-center gap-2 ${appMode === "discovery" ? "opacity-0 pointer-events-none" : ""}`}>
-                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
-                    style={{ width: `${completion}%` }}
-                  />
-                </div>
-                <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
-              </div>
-              <button
+              {active.phase && appMode !== "discovery" && <VersionBadge version={active.phase} />}
+                {appMode !== "discovery" && (
+                  <>
+                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${completion === 100 ? "bg-emerald-500" : "bg-slate-400"}`}
+                        style={{ width: `${completion}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-400 w-10">{tasksFilled}/{tasksTotal}</span>
+                  </>
+                )}
+                <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
                   title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
@@ -7191,8 +7182,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                 </button>
             </div>
           </div>
-          {/* Visual separator between main tabs and sub-tabs */}
-          <div className="border-t border-slate-200 dark:border-slate-700"></div>
           {/* Row 2: Section nav pills */}
           <div className="flex gap-1 flex-wrap items-center">
             {(appMode === "discovery" ? DISCOVERY_SECTIONS : SECTIONS).map((s) => {
@@ -7251,34 +7240,32 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {sidebarOpen && (
         <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
 
-          {/* Phase filter - only show in design mode */}
-          {appMode === "design-specs" && (
-            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-              <div className="flex gap-1 flex-wrap">
-                {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
-                  const count = phaseCounts[f] || 0;
-                  if (f !== "All" && count === 0) return null;
-                  const isActive = phaseFilter === f;
-                  const colors = VERSION_COLORS[f];
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => setPhaseFilter(f)}
-                      className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                        isActive
-                          ? colors
-                            ? `${colors.bg} ${colors.text} font-medium`
-                            : "bg-slate-800 text-white font-medium"
-                          : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-                      }`}
-                    >
-                      {f} {count > 0 && <span className="opacity-60">{count}</span>}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Phase filter */}
+          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex gap-1 flex-wrap">
+              {["All", ...VERSION_PHASES.filter((v) => v !== "Cut"), "Untagged"].map((f) => {
+                const count = phaseCounts[f] || 0;
+                if (f !== "All" && count === 0) return null;
+                const isActive = phaseFilter === f;
+                const colors = VERSION_COLORS[f];
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setPhaseFilter(f)}
+                    className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                      isActive
+                        ? colors
+                          ? `${colors.bg} ${colors.text} font-medium`
+                          : "bg-slate-800 text-white font-medium"
+                        : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {f} {count > 0 && <span className="opacity-60">{count}</span>}
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
 
           <div className="flex-1 overflow-y-auto py-2">
             {filteredAnalyses.map((a) => {
@@ -7332,7 +7319,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                           </svg>
                         </div>
                       )}
-                      {appMode === "design-specs" && a.phase && <VersionBadge version={a.phase} size="xs" />}
+                      {a.phase && <VersionBadge version={a.phase} size="xs" />}
                       {analyses.length > 1 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id); }}
@@ -7345,20 +7332,20 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
                 {/* Outcome sub-list for discovery mode */}
                 {appMode === "discovery" && a.id === activeId && (
-                  <div className="mx-2 mb-1 space-y-1">
+                  <div className="mx-2 mb-1">
                     {/* Active outcomes */}
                     {(a.outcomes || []).filter((o) => o.status === "active").map((o) => (
                       <div
                         key={o.id}
                         onClick={(e) => { e.stopPropagation(); switchOutcome(o.id); }}
-                        className={`ml-4 px-3 py-2.5 rounded-md cursor-pointer group/outcome flex items-center gap-2.5 transition-colors ${
+                        className={`ml-4 px-2.5 py-1.5 rounded-md cursor-pointer group/outcome flex items-center gap-2 transition-colors ${
                           o.id === a.activeOutcomeId
-                            ? "bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600"
+                            ? "bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700"
                             : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         }`}
                       >
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-slate-900 dark:bg-slate-400" : "bg-slate-300 dark:bg-slate-500"}`} />
-                        <span className={`text-base flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-slate-900 dark:text-slate-100" : "text-slate-700 dark:text-slate-300"}`}>{o.name}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.id === a.activeOutcomeId ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-500"}`} />
+                        <span className={`text-xs flex-1 truncate ${o.id === a.activeOutcomeId ? "font-medium text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>{o.name}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); archiveOutcome(o.id); }}
                           className="text-slate-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 opacity-0 group-hover/outcome:opacity-100 transition-opacity"
@@ -7376,17 +7363,17 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowArchivedOutcomes(!showArchivedOutcomes); }}
-                          className="ml-4 px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                          className="ml-4 px-2.5 py-1 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                         >
                           {showArchivedOutcomes ? "Hide" : "Show"} archived ({(a.outcomes || []).filter((o) => o.status === "archived").length})
                         </button>
                         {showArchivedOutcomes && (a.outcomes || []).filter((o) => o.status === "archived").map((o) => (
                           <div
                             key={o.id}
-                            className="ml-4 px-3 py-2.5 rounded-md flex items-center gap-2.5 opacity-50"
+                            className="ml-4 px-2.5 py-1.5 rounded-md flex items-center gap-2 opacity-50"
                           >
-                            <div className="w-2 h-2 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600" />
-                            <span className="text-base flex-1 truncate text-slate-500 dark:text-slate-400 line-through">{o.name}</span>
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600" />
+                            <span className="text-xs flex-1 truncate text-slate-400 dark:text-slate-500 line-through">{o.name}</span>
                           </div>
                         ))}
                       </>
@@ -7394,8 +7381,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
 
                     {/* + New Outcome button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardName(""); }}
-                      className="ml-4 px-3 py-2.5 text-base text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors w-full text-left"
+                      onClick={(e) => { e.stopPropagation(); setOutcomeWizardOpen(true); setOutcomeWizardStep(1); setOutcomeWizardName(""); setOutcomeWizardConfirmed(false); }}
+                      className="ml-4 px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors w-full text-left"
                     >
                       + New Outcome
                     </button>
@@ -7420,9 +7407,6 @@ Be concise and actionable. Respond in the same language the user writes in.`;
             >
               {appMode === "discovery" ? "+ New discovery project" : "+ New design task"}
             </button>
-            
-            {/* Divider */}
-            <div className="border-t border-slate-100 dark:border-slate-700 -mx-4"></div>
             
             {/* Export Options Section */}
             {syncOptionsExpanded && (
@@ -7636,9 +7620,9 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {activeSection === "opportunityTree" || activeSection === "sourceDocuments" || activeSection === "feedback" ? (
-          <div className="h-full p-8">{renderSection()}</div>
+          <div className="h-full p-6">{renderSection()}</div>
         ) : (
-          <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-8 py-10" : "max-w-3xl mx-auto px-8 py-10"}>
+          <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-6 py-8" : "max-w-2xl mx-auto px-6 py-8"}>
             {renderSection()}
           </div>
         )}
@@ -7813,53 +7797,91 @@ Be concise and actionable. Respond in the same language the user writes in.`;
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="font-semibold text-slate-800 dark:text-slate-200">
-                New Outcome
+                {outcomeWizardStep === 1 ? "New Outcome" : "Confirm New Outcome"}
               </h3>
               <button onClick={() => setOutcomeWizardOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
             </div>
             <div className="px-6 py-5">
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  An outcome defines a desired result. Each outcome gets its own discovery table and opportunity tree.
-                </p>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block mb-1">Outcome name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={outcomeWizardName}
-                    onChange={(e) => setOutcomeWizardName(e.target.value)}
-                    onKeyDown={(e) => { 
-                      if (e.key === "Enter" && outcomeWizardName.trim()) {
-                        addOutcome(outcomeWizardName.trim());
-                        setOutcomeWizardOpen(false);
-                        setActiveSection("discoveryTable");
-                      }
-                    }}
-                    placeholder="e.g. Reduce task completion time for admins"
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
-                  />
+              {outcomeWizardStep === 1 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    An outcome defines a desired result. Each outcome gets its own discovery table and opportunity tree.
+                  </p>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block mb-1">Outcome name</label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={outcomeWizardName}
+                      onChange={(e) => setOutcomeWizardName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && outcomeWizardName.trim()) setOutcomeWizardStep(2); }}
+                      placeholder="e.g. Reduce task completion time for admins"
+                      className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+              {outcomeWizardStep === 2 && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">This requires fresh analysis work</p>
+                    <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 list-disc pl-4">
+                      <li>Creating a new outcome starts with an empty discovery table</li>
+                      <li>You'll need to re-analyse source documents through the lens of this new outcome</li>
+                      <li>This ensures each outcome has focused, relevant opportunities</li>
+                    </ul>
+                  </div>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={outcomeWizardConfirmed}
+                      onChange={(e) => setOutcomeWizardConfirmed(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">I understand this requires fresh analysis work</span>
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
-              <button
-                onClick={() => setOutcomeWizardOpen(false)}
-                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  addOutcome(outcomeWizardName.trim());
-                  setOutcomeWizardOpen(false);
-                  setActiveSection("discoveryTable");
-                }}
-                disabled={!outcomeWizardName.trim()}
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create Outcome
-              </button>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-between">
+              {outcomeWizardStep === 2 && (
+                <button
+                  onClick={() => setOutcomeWizardStep(1)}
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  Back
+                </button>
+              )}
+              <div className="ml-auto flex gap-2">
+                <button
+                  onClick={() => setOutcomeWizardOpen(false)}
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                {outcomeWizardStep === 1 && (
+                  <button
+                    onClick={() => setOutcomeWizardStep(2)}
+                    disabled={!outcomeWizardName.trim()}
+                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                )}
+                {outcomeWizardStep === 2 && (
+                  <button
+                    onClick={() => {
+                      addOutcome(outcomeWizardName.trim());
+                      setOutcomeWizardOpen(false);
+                      setActiveSection("discoveryTable");
+                    }}
+                    disabled={!outcomeWizardConfirmed}
+                    className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Create Outcome
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

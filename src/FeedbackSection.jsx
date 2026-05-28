@@ -13,6 +13,10 @@ export default function FeedbackSection() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [customTag, setCustomTag] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [editTags, setEditTags] = useState([]);
+  const [editCustomTag, setEditCustomTag] = useState("");
 
   const predefinedTags = [
     "Account Management",
@@ -65,6 +69,7 @@ export default function FeedbackSection() {
     }
 
     const newFeedback = {
+      id: Date.now(), // Add unique ID for editing/deleting
       content: pastedText.trim(),
       tags,
       date: new Date().toISOString(),
@@ -76,6 +81,49 @@ export default function FeedbackSection() {
     setSelectedTags([]);
     setCustomTag("");
     setShowAddForm(false);
+  };
+
+  const startEditFeedback = (item) => {
+    setEditingId(item.id);
+    setEditText(item.content);
+    setEditTags(item.tags || []);
+    setEditCustomTag("");
+  };
+
+  const saveEditFeedback = (id) => {
+    const tags = [...editTags];
+    if (editCustomTag.trim()) {
+      tags.push(editCustomTag.trim());
+    }
+
+    setManualFeedback((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, content: editText.trim(), tags }
+          : item
+      )
+    );
+    setEditingId(null);
+    setEditText("");
+    setEditTags([]);
+    setEditCustomTag("");
+  };
+
+  const cancelEditFeedback = () => {
+    setEditingId(null);
+    setEditText("");
+    setEditTags([]);
+    setEditCustomTag("");
+  };
+
+  const deleteFeedback = (id) => {
+    setManualFeedback((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const toggleEditTag = (tag) => {
+    setEditTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   return (
@@ -205,32 +253,111 @@ export default function FeedbackSection() {
         )}
 
         <div className="divide-y divide-slate-100 dark:divide-slate-700">
-          {manualFeedback.map((item, idx) => (
-            <div key={`manual-${idx}`} className="px-5 py-4">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <p className="text-base text-slate-700 dark:text-slate-200 whitespace-pre-wrap flex-1 leading-relaxed">
-                  {item.content}
-                </p>
-              </div>
-              {item.tags && item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {item.tags.map((tag, tagIdx) => (
-                    <span
-                      key={tagIdx}
-                      className="px-2.5 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                      {tag}
-                    </span>
-                  ))}
+          {manualFeedback.map((item) => (
+            <div key={item.id} className="px-5 py-4">
+              {editingId === item.id ? (
+                /* Edit Mode */
+                <div className="space-y-4">
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    placeholder="Edit feedback text..."
+                    className="w-full h-32 px-4 py-3 text-base border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none leading-relaxed"
+                  />
+                  
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                      Tags:
+                    </label>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {predefinedTags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleEditTag(tag)}
+                          className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                            editTags.includes(tag)
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={editCustomTag}
+                      onChange={(e) => setEditCustomTag(e.target.value)}
+                      placeholder="Add custom tag..."
+                      className="w-full px-4 py-2.5 text-base border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={cancelEditFeedback}
+                      className="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => saveEditFeedback(item.id)}
+                      disabled={!editText.trim()}
+                      className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                /* Display Mode */
+                <>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <p className="text-base text-slate-700 dark:text-slate-200 whitespace-pre-wrap flex-1 leading-relaxed">
+                      {item.content}
+                    </p>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => startEditFeedback(item)}
+                        className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        title="Edit feedback"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => deleteFeedback(item.id)}
+                        className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                        title="Delete feedback"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {item.tags.map((tag, tagIdx) => (
+                        <span
+                          key={tagIdx}
+                          className="px-2.5 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {new Date(item.date).toLocaleString()}
+                    </p>
+                    <span className="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+                      Manual
+                    </span>
+                  </div>
+                </>
               )}
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {new Date(item.date).toLocaleString()}
-                </p>
-                <span className="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
-                  Manual
-                </span>
-              </div>
             </div>
           ))}
 
