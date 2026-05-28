@@ -235,7 +235,7 @@ export default function DocumentsSection() {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Source Documents</h2>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Research Data</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Interview transcripts and research source material.</p>
       </div>
 

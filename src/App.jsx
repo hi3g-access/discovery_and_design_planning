@@ -399,7 +399,7 @@ const DISCOVERY_SECTIONS = [
 ];
 
 const DISCOVERY_SECTIONS_RIGHT = [
-  { id: "sourceDocuments", label: "Source Documents", icon: "◉" },
+  { id: "sourceDocuments", label: "Research Data", icon: "◉" },
   { id: "feedback", label: "Tre.se Feedback", icon: "◈" },
 ];
 
@@ -5764,10 +5764,10 @@ You must NOT help with unrelated topics. If the user asks about something outsid
 Current outcome: ${outcomeContext ? outcomeContext.outcomeName : "(none selected)"}
 Discovery project: "${active?.name || "Untitled"}"
 
-Available source documents (user research interview transcripts):
+Available research data (user research interview transcripts):
 - DK — Enreach, DK — Jettime, DK — Visma (Denmark market)
 - SE — Ambea, SE — Bico, SE — Carla, SE — FedEx, SE — Investor (Sweden market)
-These are customer interview transcripts accessible via the "Source Documents" tab. Reference them when suggesting research-backed opportunities.
+These are customer interview transcripts accessible via the "Research Data" tab. Reference them when suggesting research-backed opportunities.
 
 ${outcomeContext ? `Current discovery table data:
 ${JSON.stringify(outcomeContext.discoveryTable, null, 2)}
@@ -7828,7 +7828,7 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">This requires fresh analysis work</p>
                     <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 list-disc pl-4">
                       <li>Creating a new outcome starts with an empty discovery table</li>
-                      <li>You'll need to re-analyse source documents through the lens of this new outcome</li>
+                      <li>You'll need to re-analyse research data through the lens of this new outcome</li>
                       <li>This ensures each outcome has focused, relevant opportunities</li>
                     </ul>
                   </div>
