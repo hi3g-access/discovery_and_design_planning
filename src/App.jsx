@@ -1360,7 +1360,7 @@ const AutoResizeTextarea = ({ value, onChange, rows, className, placeholder }) =
     const el = ref.current;
     if (el) {
       el.style.height = 'auto';
-      const minHeight = rows * 24; // ~24px per row
+      const minHeight = rows * 28; // ~28px per row for larger text
       el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
     }
   }, [value, rows]);
@@ -1372,25 +1372,25 @@ const AutoResizeTextarea = ({ value, onChange, rows, className, placeholder }) =
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      style={{ overflow: 'hidden' }}
+      style={{ overflow: 'hidden', lineHeight: '1.6' }}
     />
   );
 };
 
 const Field = ({ label, hint, placeholder, value, onChange, multiline = false, rows = 3 }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
-    {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{hint}</p>}
+  <div className="mb-5">
+    <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
+    {hint && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">{hint}</p>}
     {multiline ? (
       <AutoResizeTextarea
-        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+        className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 resize-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
         rows={rows} value={value || ""} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
     ) : (
       <input
         type="text"
-        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+        className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
         value={value || ""} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
@@ -1399,11 +1399,11 @@ const Field = ({ label, hint, placeholder, value, onChange, multiline = false, r
 );
 
 const Select = ({ label, hint, value, options, onChange, allowEmpty = true }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
-    {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{hint}</p>}
+  <div className="mb-5">
+    <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
+    {hint && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">{hint}</p>}
     <select
-      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+      className="w-full px-4 py-3 text-base border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
       value={value || ""} onChange={(e) => onChange(e.target.value)}
     >
       {allowEmpty && <option value="">Select...</option>}
@@ -1442,9 +1442,9 @@ const Pill = ({ active, onClick, children, completion, count }) => (
 );
 
 const SectionHeader = ({ title, description }) => (
-  <div className="mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
-    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
-    {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>}
+  <div className="mb-8 pb-5 border-b border-slate-100 dark:border-slate-700">
+    <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-200 leading-tight">{title}</h2>
+    {description && <p className="text-base text-slate-600 dark:text-slate-400 mt-3 leading-relaxed max-w-prose">{description}</p>}
   </div>
 );
 
@@ -7621,9 +7621,9 @@ Be concise and actionable. Respond in the same language the user writes in.`;
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {activeSection === "opportunityTree" || activeSection === "sourceDocuments" || activeSection === "feedback" ? (
-          <div className="h-full p-6">{renderSection()}</div>
+          <div className="h-full p-8">{renderSection()}</div>
         ) : (
-          <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-6 py-8" : "max-w-2xl mx-auto px-6 py-8"}>
+          <div className={activeSection === "mapping" || activeSection === "discoveryTable" ? "px-8 py-10" : "max-w-3xl mx-auto px-8 py-10"}>
             {renderSection()}
           </div>
         )}
