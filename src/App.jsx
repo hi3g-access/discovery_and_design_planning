@@ -388,26 +388,26 @@ const TRANSLATIONS = {
 };
 
 const SECTIONS = [
-  { id: "overview", label: "Overview", icon: "◉" },
-  { id: "problem", label: "Problem & Purpose", icon: "◎" },
-  { id: "context", label: "User Context", icon: "◈" },
-  { id: "assumptions", label: "Assumptions", icon: "◇" },
-  { id: "edges", label: "Edge Cases", icon: "◆" },
-  { id: "scope", label: "Scope & Versions", icon: "◫" },
-  { id: "acceptance", label: "Acceptance Criteria", icon: "◈" },
-  { id: "questions", label: "Open Questions", icon: "◻" },
-  { id: "notes", label: "Notes", icon: "◐" },
-  { id: "research", label: "User Research", icon: "◎" },
-  { id: "designRefs", label: "Design References", icon: "◱" },
-  { id: "codeRefs", label: "Code References", icon: "◇" },
-  { id: "design", label: "Design System", icon: "◆" },
-  { id: "wireframe", label: "Structure", icon: "◧" },
-  { id: "summary", label: "Summary", icon: "◼" },
+  { id: "overview", label: "Overview" },
+  { id: "problem", label: "Problem & Purpose" },
+  { id: "context", label: "User Context" },
+  { id: "assumptions", label: "Assumptions" },
+  { id: "edges", label: "Edge Cases" },
+  { id: "scope", label: "Scope & Versions" },
+  { id: "acceptance", label: "Acceptance Criteria" },
+  { id: "questions", label: "Open Questions" },
+  { id: "notes", label: "Notes" },
+  { id: "research", label: "User Research" },
+  { id: "designRefs", label: "Design References" },
+  { id: "codeRefs", label: "Code References" },
+  { id: "design", label: "Design System" },
+  { id: "wireframe", label: "Structure" },
+  { id: "summary", label: "Summary" },
 ];
 
 const DISCOVERY_SECTIONS = [
-  { id: "discoveryTable", label: "Opportunity Solutions", icon: "◫" },
-  { id: "opportunityTree", label: "Diagram", icon: "◆" },
+  { id: "discoveryTable", label: "Opportunity Solutions" },
+  { id: "opportunityTree", label: "Diagram" },
 ];
 
 const DISCOVERY_SECTIONS_RIGHT = [
@@ -1435,10 +1435,12 @@ const VersionBadge = ({ version, size = "sm" }) => {
   );
 };
 
-const Pill = ({ active, onClick, children, completion, count }) => (
+const Pill = ({ active, onClick, children, completion, count, highlight }) => (
   <button
     onClick={onClick}
     className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-all whitespace-nowrap ${
+      highlight ? "border-2 border-slate-400 dark:border-slate-500" : ""
+    } ${
       active ? "bg-slate-800 dark:bg-slate-600 text-white font-medium" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
     }`}
   >
@@ -7217,8 +7219,8 @@ Be concise and actionable. Respond in the same language the user writes in.`;
                   onClick={() => setActiveSection(s.id)}
                   completion={s.id !== "assumptions" && s.id !== "questions" ? getSectionCompletion(active, s.id) : undefined}
                   count={getCountText()}
+                  highlight={s.id === "summary"}
                 >
-                  <span className="mr-1 opacity-60">{s.icon}</span>
                   {t.sections[s.id] || s.label}
                 </Pill>
               );
